@@ -188,12 +188,11 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
         }
         //中缀表达式与后缀表达式原理, 例如逆波兰表达式
         if (isOp){
-            val op = token
             while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[token]!!){
-                opStack.removeAt(opStack.lastIndex)
+                val op = opStack.removeAt(opStack.lastIndex)
                 mergeSubGraph(op, subGraphStack)
             }
-            opStack.add(op)
+            opStack.add(token)
             isOp = false
         }
 
