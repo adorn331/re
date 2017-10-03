@@ -50,17 +50,6 @@ class Edge(val value: Char?, var startNode: Node, var endNode: Node){
     }
 }
 
-//fun traverseNFA(start :Node, end: Node){
-//    val visitedSet = mutableSetOf(start)
-//    while (start != end){
-//        for (i in start.nextNodes()){
-//            println("")
-//        }
-//    }
-//
-//
-//}
-
 fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
 
     when(op){
@@ -182,9 +171,10 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             if (addCat){
                 //默认要与前一个补全"隐藏的"连接符
                 val catOp = '-'
-                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!){
+                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!) {
                     val op = opStack.removeAt(opStack.lastIndex)
                     mergeSubGraph(op, subGraphStack)
+                }
             }
             opStack.add(token)
             addCat = true
@@ -249,6 +239,31 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
     }
 
     return subGraphStack
+}
+
+
+//获得一个节点的epsilon闭包
+fun epsClosure(node :Node) :MutableSet<Node>{
+    val closureSet = mutableSetOf<Node>()
+    val watingQueue = mutableListOf<Node>(node)
+
+    while (!watingQueue.isEmpty()){
+
+        val current  = watingQueue.first()
+        watingQueue.removeAt(0)
+
+        if (current !in closureSet){
+            closureSet.add(current)
+            for (outedge in current.outEdges){
+                if (outedge.value == null){
+                    watingQueue.add(outedge.endNode)
+                }
+            }
+
+        }
+    }
+
+    return closureSet
 }
 
 fun main(args: Array<String>) {
