@@ -109,52 +109,55 @@ fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
         '*' -> {
             //取出栈顶的一个子图做闭包
             val subGraph = subGraphStack.last()
-            subGraphStack.removeAt(subGraphStack.lastIndex)
+//            subGraphStack.removeAt(subGraphStack.lastIndex)
             val startNode = subGraph[0]
             val endNode = subGraph[1]
-            endNode.end = false
-
-            val newStartNode = Node()
-            val newEndNode = Node(end=true)
+//            endNode.end = false
+//
+//            val newStartNode = Node()
+//            val newEndNode = Node(end=true)
+//            Edge(null, startNode, endNode)
+//            Edge(null, newStartNode, newEndNode)
+//            Edge(null, newStartNode, startNode)
+//            Edge(null, endNode, newEndNode)
             Edge(null, startNode, endNode)
-            Edge(null, newStartNode, newEndNode)
-            Edge(null, newStartNode, startNode)
-            Edge(null, endNode, newEndNode)
-
-            subGraphStack.add(listOf(newStartNode, newEndNode))
+            Edge(null, endNode, startNode)
+//            subGraphStack.add(listOf(newStartNode, newEndNode))
         }
 
         '?' -> {
             val subGraph = subGraphStack.last()
-            subGraphStack.removeAt(subGraphStack.lastIndex)
+//            subGraphStack.removeAt(subGraphStack.lastIndex)
             val startNode = subGraph[0]
             val endNode = subGraph[1]
-            endNode.end = false
-
-            val newStartNode = Node()
-            val newEndNode = Node(end=true)
-            Edge(null, newStartNode, newEndNode)
-            Edge(null, newStartNode, startNode)
-            Edge(null, endNode, newEndNode)
-
-            subGraphStack.add(listOf(newStartNode, newEndNode))
+            Edge(null, startNode, endNode)
+//            endNode.end = false
+//
+//            val newStartNode = Node()
+//            val newEndNode = Node(end=true)
+//            Edge(null, newStartNode, newEndNode)
+//            Edge(null, newStartNode, startNode)
+//            Edge(null, endNode, newEndNode)
+//
+//            subGraphStack.add(listOf(newStartNode, newEndNode))
         }
 
         '+' -> {
             //取出栈顶的一个子图做闭包
             val subGraph = subGraphStack.last()
-            subGraphStack.removeAt(subGraphStack.lastIndex)
+//            subGraphStack.removeAt(subGraphStack.lastIndex)
             val startNode = subGraph[0]
             val endNode = subGraph[1]
-            endNode.end = false
-
-            val newStartNode = Node()
-            val newEndNode = Node(end=true)
-            Edge(null, startNode, endNode)
-            Edge(null, newStartNode, startNode)
-            Edge(null, endNode, newEndNode)
-
-            subGraphStack.add(listOf(newStartNode, newEndNode))
+            Edge(null, endNode, startNode)
+//            endNode.end = false
+//
+//            val newStartNode = Node()
+//            val newEndNode = Node(end=true)
+//            Edge(null, startNode, endNode)
+//            Edge(null, newStartNode, startNode)
+//            Edge(null, endNode, newEndNode)
+//
+//            subGraphStack.add(listOf(newStartNode, newEndNode))
         }
     }
 }
