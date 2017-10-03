@@ -1,47 +1,65 @@
 val operator_priority = mapOf('|' to 1, '-' to 2, '*' to 3)
 // 三种基本的符号：或 连接 闭包
 
-//var s = 0
+var s = 0
 
-class Node(val inEdeges: MutableList<Edege> = mutableListOf<Edege>(),
-           val outEdeges: MutableList<Edege> = mutableListOf<Edege>(), var end: Boolean=false){
+class Node(val inEdges: MutableList<Edge> = mutableListOf<Edge>(),
+           val outEdges: MutableList<Edge> = mutableListOf<Edge>(), var end: Boolean=false){
 
-    //var statu: Int = 0 //标识自动机每个不同节点的状态号码
-//    var statu:Int = 0
-//    init {
-//        s += 1
-//        statu = s
-//    }
-
-    fun addInEdege(inEdege: Edege){
-        inEdege.endNode = this
-        this.inEdeges.add(inEdege)
+//    var statu: Int = 0 //标识自动机每个不同节点的状态号码
+    var statu:Int = 0
+    init {
+        s += 1
+        statu = s
     }
 
-    fun addOutEdege(outEdege: Edege){
-        outEdege.startNode = this
-        this.outEdeges.add(outEdege)
+    fun addInEdge(inEdge: Edge){
+        inEdge.endNode = this
+        this.inEdges.add(inEdge)
+    }
+
+    fun addOutEdge(outEdge: Edge){
+        outEdge.startNode = this
+        this.outEdges.add(outEdge)
     }
 
     //用于汤普森算法合并子图
     fun merge(node: Node){
         this.end = node.end
 
-        for (edege in this.outEdeges){
-            node.outEdeges.add(edege)
+        for (edge in this.outEdges){
+            node.outEdges.add(edge)
         }
-        for (edege in this.inEdeges){
-            node.inEdeges.add(edege)
+        for (edge in this.inEdges){
+            node.inEdges.add(edge)
         }
+    }
+//
+//    fun nextNodes () :MutableList<Map<Char, Node>>{
+//        val nodeList = mutableListOf<Map<Char, Node>>()
+//        for (edge in this.outEdges)
+//            nodeList.add(mapOf(edge.value!! to edge.endNode))
+//        return nodeList
+//    }
+}
+
+class Edge(val value: Char?, var startNode: Node, var endNode: Node){
+    init {
+        startNode.outEdges.add(this)
+        endNode.inEdges.add(this)
     }
 }
 
-class Edege(val value: Char?, var startNode: Node, var endNode: Node){
-    init {
-        startNode.outEdeges.add(this)
-        endNode.inEdeges.add(this)
-    }
-}
+//fun traverseNFA(start :Node, end: Node){
+//    val visitedSet = mutableSetOf(start)
+//    while (start != end){
+//        for (i in start.nextNodes()){
+//            println("")
+//        }
+//    }
+//
+//
+//}
 
 fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
 
@@ -50,7 +68,7 @@ fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
             //取出两个栈顶的子图
             val subGraph2 = subGraphStack.last()
             subGraphStack.removeAt(subGraphStack.lastIndex)
-            println(subGraph2)
+            //println(subGraph2)
             val startNode2 = subGraph2[0]
             val endNode2 = subGraph2[1]
             val subGraph1 = subGraphStack.last()
@@ -80,10 +98,10 @@ fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
             val newStartNode = Node()
             val newEndNode = Node(end=true)
             //加四条epsilon边
-            Edege(null, newStartNode, startNode1)
-            Edege(null, newStartNode, startNode2)
-            Edege(null, startNode1, newEndNode)
-            Edege(null, startNode1, newEndNode)
+            Edge(null, newStartNode, startNode1)
+            Edge(null, newStartNode, startNode2)
+            Edge(null, startNode1, newEndNode)
+            Edge(null, startNode1, newEndNode)
 
             subGraphStack.add(listOf(newStartNode, newEndNode))
         }
@@ -98,10 +116,10 @@ fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
 
             val newStartNode = Node()
             val newEndNode = Node(end=true)
-            Edege(null, startNode, endNode)
-            Edege(null, newStartNode, newEndNode)
-            Edege(null, newStartNode, startNode)
-            Edege(null, endNode, newEndNode)
+            Edge(null, startNode, endNode)
+            Edge(null, newStartNode, newEndNode)
+            Edge(null, newStartNode, startNode)
+            Edge(null, endNode, newEndNode)
 
             subGraphStack.add(listOf(newStartNode, newEndNode))
         }
@@ -119,14 +137,14 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
 
         if (token == '|'){
             isOp = true
-            opStack.add(token)
             addCat = false
         }
         else if (token == '*'){
             isOp = true
-            opStack.add(token)
         }
-
+        else{
+            isOp = false
+        }
         //中缀表达式与后缀表达式原理, 例如逆波兰表达式
         if (isOp){
             val op = token
@@ -141,7 +159,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             if (addCat){
                 //字符之间默认要与前一个补全"隐藏的"连接符
                 val catOp = '-'
-                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority['-']!!){
+                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!){
                     val op = opStack.removeAt(opStack.lastIndex)
                     mergeSubGraph(op, subGraphStack)
                 }
@@ -150,7 +168,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             //单个字符构造最基本的子图
             val startNode = Node()
             val endNode = Node(end=true)
-            Edege(token, startNode, endNode)
+            Edge(token, startNode, endNode)
             subGraphStack.add(listOf(startNode, endNode))
             addCat = true
 
