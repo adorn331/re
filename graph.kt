@@ -166,6 +166,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
     val subGraphStack: MutableList<List<Node>> = mutableListOf() //存放子图
     val opStack: MutableList<Char> = mutableListOf()    //存放字符间的连接符号
     var isOp = false
+    var isFirst  = true
     var addCat = false //确认是否需要补上字符间默认的连接符'-'
 
     for (token in pattern){
@@ -177,7 +178,9 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
         else if (token == '*' || token == '?' || token == '+'){
             isOp = true
         }
+        //括号有bug!!!!!!!!!!!
         else if (token == '('){
+            //补充is_first判断!!!!!!!!!****** --()*的时候出错
             if (addCat){
                 //默认要与前一个补全"隐藏的"连接符
                 val catOp = '-'
@@ -187,7 +190,9 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
                 }
             }
             opStack.add(token)
-            addCat = true
+            if (!isFirst)
+                addCat = true
+            isFirst = false
             continue
         }
         else if (token == ')'){
@@ -228,6 +233,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             val endNode = Node(end=true)
             Edge(token, startNode, endNode)
             subGraphStack.add(listOf(startNode, endNode))
+            isFirst =  false
             addCat = true
 
         }
