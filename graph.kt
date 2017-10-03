@@ -1,0 +1,178 @@
+val operator_priority = mapOf('|' to 1, '-' to 2, '*' to 3)
+// 三种基本的符号：或 连接 闭包
+
+//var s = 0
+
+class Node(val inEdeges: MutableList<Edege> = mutableListOf<Edege>(),
+           val outEdeges: MutableList<Edege> = mutableListOf<Edege>(), var end: Boolean=false){
+
+    //var statu: Int = 0 //标识自动机每个不同节点的状态号码
+//    var statu:Int = 0
+//    init {
+//        s += 1
+//        statu = s
+//    }
+
+    fun addInEdege(inEdege: Edege){
+        inEdege.endNode = this
+        this.inEdeges.add(inEdege)
+    }
+
+    fun addOutEdege(outEdege: Edege){
+        outEdege.startNode = this
+        this.outEdeges.add(outEdege)
+    }
+
+    //用于汤普森算法合并子图
+    fun merge(node: Node){
+        this.end = node.end
+
+        for (edege in this.outEdeges){
+            node.outEdeges.add(edege)
+        }
+        for (edege in this.inEdeges){
+            node.inEdeges.add(edege)
+        }
+    }
+}
+
+class Edege(val value: Char?, var startNode: Node, var endNode: Node){
+    init {
+        startNode.outEdeges.add(this)
+        endNode.inEdeges.add(this)
+    }
+}
+
+fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
+
+    when(op){
+        '-' -> {
+            //取出两个栈顶的子图
+            val subGraph2 = subGraphStack.last()
+            subGraphStack.removeAt(subGraphStack.lastIndex)
+            println(subGraph2)
+            val startNode2 = subGraph2[0]
+            val endNode2 = subGraph2[1]
+            val subGraph1 = subGraphStack.last()
+            subGraphStack.removeAt(subGraphStack.lastIndex)
+            val startNode1 = subGraph1[0]
+            val endNode1 = subGraph1[1]
+
+            //串联两个子图
+            endNode1.merge(startNode2)
+            subGraphStack.add(listOf(startNode1, endNode2))
+        }
+
+        '|' -> {
+            //取出两个栈顶的子图
+            val subGraph2 = subGraphStack.last()
+            subGraphStack.removeAt(subGraphStack.lastIndex)
+            val startNode2 = subGraph2[0]
+            val endNode2 = subGraph2[1]
+            val subGraph1 = subGraphStack.last()
+            subGraphStack.removeAt(subGraphStack.lastIndex)
+            val startNode1 = subGraph1[0]
+            val endNode1 = subGraph1[1]
+
+            endNode1.end = false
+            endNode2.end = false
+            //并联两个子图
+            val newStartNode = Node()
+            val newEndNode = Node(end=true)
+            //加四条epsilon边
+            Edege(null, newStartNode, startNode1)
+            Edege(null, newStartNode, startNode2)
+            Edege(null, startNode1, newEndNode)
+            Edege(null, startNode1, newEndNode)
+
+            subGraphStack.add(listOf(newStartNode, newEndNode))
+        }
+
+        '*' -> {
+            //取出栈顶的一个子图做闭包
+            val subGraph = subGraphStack.last()
+            subGraphStack.removeAt(subGraphStack.lastIndex)
+            val startNode = subGraph[0]
+            val endNode = subGraph[1]
+            endNode.end = false
+
+            val newStartNode = Node()
+            val newEndNode = Node(end=true)
+            Edege(null, startNode, endNode)
+            Edege(null, newStartNode, newEndNode)
+            Edege(null, newStartNode, startNode)
+            Edege(null, endNode, newEndNode)
+
+            subGraphStack.add(listOf(newStartNode, newEndNode))
+        }
+    }
+}
+
+//正则表达式转换为NFA图
+fun re2NFA(pattern: String) :MutableList<List<Node>>{
+    val subGraphStack: MutableList<List<Node>> = mutableListOf() //存放子图
+    val opStack: MutableList<Char> = mutableListOf()    //存放字符间的连接符号
+    var isOp = false
+    var addCat = false //确认是否需要补上字符间默认的连接符'-'
+
+    for (token in pattern){
+
+        if (token == '|'){
+            isOp = true
+            opStack.add(token)
+            addCat = false
+        }
+        else if (token == '*'){
+            isOp = true
+            opStack.add(token)
+        }
+
+        //中缀表达式与后缀表达式原理, 例如逆波兰表达式
+        if (isOp){
+            val op = token
+            while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[token]!!){
+                opStack.removeAt(opStack.lastIndex)
+                mergeSubGraph(op, subGraphStack)
+            }
+            opStack.add(op)
+        }
+
+        else{//是字符
+            if (addCat){
+                //字符之间默认要与前一个补全"隐藏的"连接符
+                val catOp = '-'
+                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority['-']!!){
+                    val op = opStack.removeAt(opStack.lastIndex)
+                    mergeSubGraph(op, subGraphStack)
+                }
+                opStack.add(catOp)
+            }
+            //单个字符构造最基本的子图
+            val startNode = Node()
+            val endNode = Node(end=true)
+            Edege(token, startNode, endNode)
+            subGraphStack.add(listOf(startNode, endNode))
+            addCat = true
+
+        }
+    }
+
+    //将符号栈内所剩的符号应用后清空栈
+    while (!opStack.isEmpty()){
+        val op = opStack.last()
+        opStack.removeAt(opStack.lastIndex)
+        mergeSubGraph(op, subGraphStack)
+    }
+
+    return subGraphStack
+}
+
+fun main(args: Array<String>) {
+    val re = readLine()
+    val graph = re2NFA(re!!)[0]
+    val n1 = graph[0]
+    val n2 = graph[1]
+    println(n1.statu)
+    println(n2.statu)
+
+}
