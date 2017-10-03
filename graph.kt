@@ -1,4 +1,4 @@
-val operator_priority = mapOf('|' to 1, '-' to 2, '*' to 3)
+val operator_priority = mapOf('|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3)
 // 三种基本的符号：或 连接 闭包
 
 var s = 0
@@ -123,6 +123,39 @@ fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
 
             subGraphStack.add(listOf(newStartNode, newEndNode))
         }
+
+        '?' -> {
+            val subGraph = subGraphStack.last()
+            subGraphStack.removeAt(subGraphStack.lastIndex)
+            val startNode = subGraph[0]
+            val endNode = subGraph[1]
+            endNode.end = false
+
+            val newStartNode = Node()
+            val newEndNode = Node(end=true)
+            Edge(null, newStartNode, newEndNode)
+            Edge(null, newStartNode, startNode)
+            Edge(null, endNode, newEndNode)
+
+            subGraphStack.add(listOf(newStartNode, newEndNode))
+        }
+
+        '+' -> {
+            //取出栈顶的一个子图做闭包
+            val subGraph = subGraphStack.last()
+            subGraphStack.removeAt(subGraphStack.lastIndex)
+            val startNode = subGraph[0]
+            val endNode = subGraph[1]
+            endNode.end = false
+
+            val newStartNode = Node()
+            val newEndNode = Node(end=true)
+            Edge(null, startNode, endNode)
+            Edge(null, newStartNode, startNode)
+            Edge(null, endNode, newEndNode)
+
+            subGraphStack.add(listOf(newStartNode, newEndNode))
+        }
     }
 }
 
@@ -135,15 +168,23 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
 
     for (token in pattern){
 
-        if (token == '|'){
-            isOp = true
-            addCat = false
-        }
-        else if (token == '*'){
-            isOp = true
-        }
-        else{
-            isOp = false
+//        if (token == '|'){
+//            isOp = true
+//            addCat = false
+//        }
+//        else if (token == '*'){
+//            isOp = true
+//        }
+//        else{
+//            isOp = false
+//        }
+        when(token){
+            '|' -> {
+                isOp = true
+                addCat  = false
+            }
+            '*', '?', '+' -> isOp = true
+            else -> isOp = false
         }
         //中缀表达式与后缀表达式原理, 例如逆波兰表达式
         if (isOp){
@@ -153,6 +194,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
                 mergeSubGraph(op, subGraphStack)
             }
             opStack.add(op)
+            isOp = false
         }
 
         else{//是字符
