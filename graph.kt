@@ -176,6 +176,13 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             isOp = true
         }
         else if (token == '('){
+            if (addCat){
+                //默认要与前一个补全"隐藏的"连接符
+                val catOp = '-'
+                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!){
+                    val op = opStack.removeAt(opStack.lastIndex)
+                    mergeSubGraph(op, subGraphStack)
+            }
             opStack.add(token)
             addCat = true
             continue
@@ -186,6 +193,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
                 opStack.removeAt(opStack.lastIndex)
                 mergeSubGraph(op, subGraphStack)
             }
+            opStack.removeAt(opStack.lastIndex) //弹出'('
             addCat = true
         }
         else{
