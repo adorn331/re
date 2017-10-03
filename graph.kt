@@ -304,7 +304,17 @@ fun nfa2DFA(nfaStart: Node): Node{
                         if (i.end)
                             newNode.end = true //这个dfa节点集中包含了原来nfa的结束节点的话那么抽象出来的dfa节点也是结束节点
                     }
-                    Edge(alpha, currentDfaNode, newNode)
+
+                    //有可能这个新的dfa节点就是自己本身,也就是要加一条回环边
+                    var is_self = true
+                    for (node in newSet){
+                        if (node !in currentSet)
+                            is_self = false
+                    }
+                    if (is_self)
+                        Edge(alpha, currentDfaNode, currentDfaNode)
+                    else
+                        Edge(alpha, currentDfaNode, newNode)
 
                     if (newSet !in dfaSets) {
                         dfaSets.add(newSet)
