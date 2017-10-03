@@ -1,4 +1,4 @@
-val operator_priority = mapOf('|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3)
+val operator_priority = mapOf('(' to -1, '|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3)
 // 三种基本的符号：或 连接 闭包
 
 var s = 0
@@ -168,24 +168,38 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
 
     for (token in pattern){
 
-//        if (token == '|'){
-//            isOp = true
-//            addCat = false
-//        }
-//        else if (token == '*'){
-//            isOp = true
-//        }
-//        else{
-//            isOp = false
-//        }
-        when(token){
-            '|' -> {
-                isOp = true
-                addCat  = false
-            }
-            '*', '?', '+' -> isOp = true
-            else -> isOp = false
+        if (token == '|'){
+            isOp = true
+            addCat = false
         }
+        else if (token == '*' || token == '?' || token == '+'){
+            isOp = true
+        }
+        else if (token == '('){
+            opStack.add(token)
+            addCat = true
+            continue
+        }
+        else if (token == ')'){
+            while (opStack[opStack.lastIndex] != '('){
+                val op = opStack[opStack.lastIndex]
+                opStack.removeAt(opStack.lastIndex)
+                mergeSubGraph(op, subGraphStack)
+            }
+            addCat = true
+        }
+        else{
+            isOp = false
+        }
+//        when(token){
+//            '|' -> {
+//                isOp = true
+//                addCat  = false
+//            }
+//            '*', '?', '+' -> isOp = true
+//            else -> isOp = false
+//        }
+
         //中缀表达式与后缀表达式原理, 例如逆波兰表达式
         if (isOp){
             while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[token]!!){
