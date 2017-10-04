@@ -1,17 +1,12 @@
-val operator_priority = mapOf('(' to -1, '|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3)
+import kotlin.concurrent.fixedRateTimer
+
+val operator_priority = mapOf('(' to -1, '[' to -1, '|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3)
 // 三种基本的符号：或 连接 闭包
 
-var s = 0
 
 class Node(val inEdges: MutableList<Edge> = mutableListOf<Edge>(),
            val outEdges: MutableList<Edge> = mutableListOf<Edge>(), var end: Boolean=false){
 
-//    var statu: Int = 0 //标识自动机每个不同节点的状态号码
-    var statu:Int = 0
-    init {
-        s += 1
-        statu = s
-    }
 
     fun addInEdge(inEdge: Edge){
         inEdge.endNode = this
@@ -76,6 +71,8 @@ fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
 
             //串联两个子图
             //endNode1.merge(startNode2)
+
+            endNode1.end = false
             Edge(null, endNode1, startNode2)
             subGraphStack.add(listOf(startNode1, endNode2))
         }
@@ -99,8 +96,8 @@ fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
             //加四条epsilon边
             Edge(null, newStartNode, startNode1)
             Edge(null, newStartNode, startNode2)
-            Edge(null, startNode1, newEndNode)
-            Edge(null, startNode1, newEndNode)
+            Edge(null, endNode1, newEndNode)
+            Edge(null, endNode2, newEndNode)
 
             subGraphStack.add(listOf(newStartNode, newEndNode))
         }
@@ -166,11 +163,12 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
     val subGraphStack: MutableList<List<Node>> = mutableListOf() //存放子图
     val opStack: MutableList<Char> = mutableListOf()    //存放字符间的连接符号
     var isOp = false
-    var isFirst  = true
+    //var isFirst  = true
+    var inBracket = false //标志是否在[]当中, 是的话字符间的连接不应该默认是'-'而应该默认是'|'
     var addCat = false //确认是否需要补上字符间默认的连接符'-'
 
-    for (token in pattern){
-
+    for (i in 0..pattern.length - 1){
+        val token = pattern[i]
         if (token == '|'){
             isOp = true
             addCat = false
@@ -178,21 +176,21 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
         else if (token == '*' || token == '?' || token == '+'){
             isOp = true
         }
-        //括号有bug!!!!!!!!!!!
+        //括号有bug!!!!!!!!!!!, 特别是后面是+*重复的时候, 后面的字符不能组成一簇和括号里面的配对
         else if (token == '('){
             //补充is_first判断!!!!!!!!!****** --()*的时候出错
             if (addCat){
                 //默认要与前一个补全"隐藏的"连接符
-                val catOp = '-'
+                val catOp = if (!inBracket) '-' else '|'
                 while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!) {
                     val op = opStack.removeAt(opStack.lastIndex)
                     mergeSubGraph(op, subGraphStack)
                 }
+                opStack.add(catOp)
             }
             opStack.add(token)
-            if (!isFirst)
-                addCat = true
-            isFirst = false
+            addCat = false
+            //isFirst = false
             continue
         }
         else if (token == ')'){
@@ -203,7 +201,40 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             }
             opStack.removeAt(opStack.lastIndex) //弹出'('
             addCat = true
+            continue
         }
+
+        //使用类似与()的处理方法
+        else if (token == '['){
+            if (addCat){
+                //默认要与前一个补全"隐藏的"连接符
+                val addOp = if (!inBracket) '-' else '|'
+                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[addOp]!!) {
+                    val op = opStack.removeAt(opStack.lastIndex)
+                    mergeSubGraph(op, subGraphStack)
+                }
+                opStack.add(addOp)
+            }
+            opStack.add(token)
+            addCat = false
+            inBracket = true
+            continue
+        }
+
+        else if (token == ']'){
+            while (opStack[opStack.lastIndex] != '['){
+                val op = opStack[opStack.lastIndex]
+                opStack.removeAt(opStack.lastIndex)
+                mergeSubGraph(op, subGraphStack)
+            }
+            opStack.removeAt(opStack.lastIndex) //弹出'['
+            addCat = true
+            inBracket = false
+            continue
+        }
+
+
+
         else{
             isOp = false
         }
@@ -221,7 +252,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
         else{//是字符
             if (addCat){
                 //字符之间默认要与前一个补全"隐藏的"连接符
-                val catOp = '-'
+                val catOp = if (!inBracket) '-' else '|'
                 while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!){
                     val op = opStack.removeAt(opStack.lastIndex)
                     mergeSubGraph(op, subGraphStack)
@@ -233,7 +264,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             val endNode = Node(end=true)
             Edge(token, startNode, endNode)
             subGraphStack.add(listOf(startNode, endNode))
-            isFirst =  false
+            //isFirst =  false
             addCat = true
 
         }
