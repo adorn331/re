@@ -31,8 +31,8 @@ class Node(val inEdges: MutableList<Edge> = mutableListOf<Edge>(),
     }
 
     //查看这个节点通过非epsilon边可以到达的节点集合
-    fun nextNodes (v: Char) :MutableList<Node>{
-        val nodeList = mutableListOf<Node>()
+    fun nextNodes (v: Char) :MutableSet<Node>{
+        val nodeList = mutableSetOf<Node>()
         for (edge in this.outEdges)
             if (edge.value != null && edge.value == v)
                 nodeList.add(edge.endNode)
@@ -169,6 +169,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
 
     for (i in 0..pattern.length - 1){
         val token = pattern[i]
+
         if (token == '|'){
             isOp = true
             addCat = false
@@ -178,7 +179,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
         }
         else if (token == '('){
             if (addCat){
-                //默认要与前一个补全"隐藏的"连接符
+                //补充此字符与前一个字符默认"隐藏的"连接符
                 val catOp = if (!inBracket) '-' else '|'
                 while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!) {
                     val op = opStack.removeAt(opStack.lastIndex)
@@ -203,9 +204,10 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
         }
 
         //使用类似与()的处理方法
+        //思路:将[abc] 处理为 (a|b|c)
         else if (token == '['){
             if (addCat){
-                //默认要与前一个补全"隐藏的"连接符
+                //补充此字符与前一个字符默认"隐藏的"连接符
                 val addOp = if (!inBracket) '-' else '|'
                 while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[addOp]!!) {
                     val op = opStack.removeAt(opStack.lastIndex)
@@ -231,6 +233,44 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             continue
         }
 
+        //处理[]括号中的'-',例如[a-z] [0-9]
+        //思路:处理为 (0|1|2|3|4|5..|9)
+        else if (token == '-' && inBracket){
+            val start = pattern[i - 1].toInt()
+            val end = pattern[i + 1].toInt()
+
+//            if (addCat){
+//                //补充此字符与前一个字符默认"隐藏的"连接符
+//                val catOp = if (!inBracket) '-' else '|'
+//                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!){
+//                    val op = opStack.removeAt(opStack.lastIndex)
+//                    mergeSubGraph(op, subGraphStack)
+//                }
+//                opStack.add(catOp)
+//            }
+//
+//            //构造这些全部并联的nfa子图
+//            val newStartNode = Node()
+//            val newEndNode = Node(end=true)
+            for (current in start + 1..end - 1){
+                val ch = current.toChar()
+                val orOp = '|'
+                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[orOp]!!){
+                    val op = opStack.removeAt(opStack.lastIndex)
+                    mergeSubGraph(op, subGraphStack)
+                }
+                opStack.add(orOp)
+                val startNode = Node()
+                val endNode = Node(end=true)
+                Edge(ch, startNode, endNode)
+                subGraphStack.add(listOf(startNode, endNode))
+            }
+
+            //要与后面的连接
+           // addCat = true
+            continue
+        }
+
 
 
         else{
@@ -249,7 +289,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
 
         else{//是字符
             if (addCat){
-                //字符之间默认要与前一个补全"隐藏的"连接符
+                //补充此字符与前一个字符默认"隐藏的"连接符
                 val catOp = if (!inBracket) '-' else '|'
                 while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!){
                     val op = opStack.removeAt(opStack.lastIndex)
@@ -279,7 +319,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
 }
 
 
-//获得一个节点的epsilon闭包
+//获得一个nfa节点的epsilon闭包, 服务于子集构造算法
 fun epsClosure(node :Node) :MutableSet<Node>{
     val closureSet = mutableSetOf<Node>()
     val watingQueue = mutableListOf<Node>(node)
@@ -303,99 +343,100 @@ fun epsClosure(node :Node) :MutableSet<Node>{
     return closureSet
 }
 
+//获得一个nfa节点集合的epsilon闭包
+fun epsClosureSet(nfaSet: MutableSet<Node>) :MutableSet<Node>{
+    val closureSets = mutableSetOf<Node>()
+    for (nfaNode in nfaSet)
+        closureSets.addAll(epsClosure(nfaNode))
 
+    return closureSets
+}
 
+//一个nfa节点集合能够通过value移动到的节点集合
+fun move(nfaSet: MutableSet<Node>, value: Char) :MutableSet<Node>{
+    val moveSet = mutableSetOf<Node>()
+    for (nfaNode in nfaSet)
+        moveSet.addAll(nfaNode.nextNodes(value))
+    return moveSet
+}
 
 //使用子集构造算法用于将NFA转换为DFA图
 //返回DFA图的起点
 fun nfa2DFA(nfaStart: Node): Node{
     val watingQueue = mutableListOf<Pair<MutableSet<Node>, Node>>()   //存放待处理的新DFA(集合)节点 to 抽象节点的队列
+    val exitDfaSets = mutableSetOf<MutableSet<Node>>()
+    val exitDfaNodes  = mutableSetOf<Pair<MutableSet<Node>, Node>>() //存放已经处理过的DFA(集合)节点 to 抽象节点的pair
+
     var currentSet :MutableSet<Node>   //作为dfa起始子集
-    val dfaSets  = mutableSetOf<MutableSet<Node>>(epsClosure(nfaStart)) //存放已经处理过的DFA(集合)节点
+    var currentDfaNode: Node   //DFA中的一个抽象出的节点
 
-    val dfaStart: Node  = Node()//DFA节点虽然是子集但仍最后抽象成一个点, 这个节点也是最终返回的
-    var currentDfaNode: Node   //同理,DFA中的一个节点
-
+    val dfaStart  = Node()//DFA节点虽然是子集但仍最后抽象成一个点, 这个节点也是最终返回的
     watingQueue.add(epsClosure(nfaStart) to dfaStart)
 
     while (!watingQueue.isEmpty()) {
-//        (currentSet, currentDfaNode) = watingQueue[0]
         currentSet = watingQueue[0].first
         currentDfaNode = watingQueue[0].second
         watingQueue.removeAt(0)
         //处理队列中的首个未处理dfa节点
+        exitDfaNodes.add(currentSet to currentDfaNode)
+        exitDfaSets.add(currentSet)
 
-
-        for (alpha in 1.toChar()..256.toChar()) {//******
-            for (nfaNode in currentSet) {
-                if (!nfaNode.nextNodes(alpha).isEmpty()) {
-
-                    val newSet = mutableSetOf<Node>()
-                    for (reachedNode in nfaNode.nextNodes(alpha)){
-                        newSet.addAll(epsClosure(reachedNode))
-                    }
-                    val newNode = Node()
-                    for (i in newSet) {
-                        if (i.end)
-                            newNode.end = true //这个dfa节点集中包含了原来nfa的结束节点的话那么抽象出来的dfa节点也是结束节点
-                    }
-
-                    //有可能指向自己本身,也就是dfa要加一条回环边
-                    var to_self = false
-                    for (node in newSet){
-                        if (node in currentSet)
-                            to_self = true
-                    }
-                    if (to_self)
-                        Edge(alpha, currentDfaNode, currentDfaNode)
-                    else
-                        Edge(alpha, currentDfaNode, newNode)
-
-                    if (newSet !in dfaSets) {
-                        dfaSets.add(newSet)
-                        watingQueue.add(newSet to newNode)
-
-                } else
-                    continue
-
-                }
-
+        val alphaSet = mutableSetOf<Char>()     //存放可以到达的字符
+        for (alpha in 1.toChar()..256.toChar()){
+            for (nfaNode in currentSet){
+                if (!nfaNode.nextNodes(alpha).isEmpty())
+                    alphaSet.add(alpha)
             }
         }
+
+        var newSet: MutableSet<Node>
+        for (alpha in alphaSet){
+            newSet = epsClosureSet(move(currentSet, alpha))
+            if (newSet !in exitDfaSets) {
+                val newNode = Node()
+                Edge(alpha, currentDfaNode, newNode)
+                watingQueue.add(newSet to newNode)
+            }
+            else{
+                for (i in exitDfaNodes){
+                    if (i.first == newSet) {
+                        Edge(alpha, currentDfaNode, i.second)
+                        break
+                    }
+                }
+            }
+        }
+
     }
 
     return dfaStart
 }
 
 fun main(args: Array<String>) {
-//    val re = readLine()
-//    val graph = re2NFA(re!!)[0]
-//    val n1 = graph[0]
-//    val n2 = graph[1]
-//    println(n1.statu)
-//    println(n2.statu)
-    val re  = readLine()!!
-    val text: String? = readLine()
-    if (text == null)
-        return
 
-    val nfaStartNode = re2NFA(re)[0][0]
-    val dfaStartNode = nfa2DFA(nfaStartNode)
-    var dfaNode: Node? = dfaStartNode
+    while (true) {
+        val re = readLine()!!
+        val text: String? = readLine()
+        if (text == null)
+            return
 
-    var startPos = 0
-    var endPos = 0
+        val nfaStartNode = re2NFA(re)[0][0]
+        val dfaStartNode = nfa2DFA(nfaStartNode)
+        var dfaNode: Node? = dfaStartNode
 
-    while (endPos < text.length){
-        if (dfaNode!!.nextNode(text[endPos]) != null){
-            val c = text[endPos]
-            endPos += 1
-            dfaNode = dfaNode.nextNode(c)
+        var startPos = 0
+        var endPos = 0
 
+        while (endPos < text.length) {
+            if (dfaNode!!.nextNode(text[endPos]) != null) {
+                val c = text[endPos]
+                endPos += 1
+                dfaNode = dfaNode.nextNode(c)
+
+            } else
+                break
         }
-        else
-            break
-    }
 
-    println(endPos)
+        println(endPos)
+    }
 }
