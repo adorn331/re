@@ -405,50 +405,118 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             }
 
             //对应情况{n,m}
-            //思路示意: a{1,3} --> (a|aa|aaa)
+            //思路示意: a{1,3} --> (a|aa|aaa) \w --> (\w|\w\w|\w\w\w)
             else if (pattern[i + 2] == ',' && pattern[i + 3] != '}'){
-                val minReapt = pattern[i + 1].toInt() - '0'.toInt()
-                val maxReapt = pattern[i + 3].toInt() - '0'.toInt()
-                val repeatChar = pattern[i - 1]
+                //是转义字符集的重复次数,例如\d{3,8}
+                if  (i >= 2 && pattern[i - 2] == '\\' && pattern[i - 1] !in operator_priority){
+                    val minReapt = pattern[i + 1].toInt() - '0'.toInt()
+                    val maxReapt = pattern[i + 3].toInt() - '0'.toInt()
+                    val repeatChar = pattern[i - 1]
 
-                subGraphStack.removeAt(subGraphStack.lastIndex)
+                    subGraphStack.removeAt(subGraphStack.lastIndex)
+                    opStack.add('(') //压入'(', 方便转换为(||||)形式
 
+                    for (repeatTime in minReapt..maxReapt) {
+                        //先生成成类似于\d\d\d
+                        opStack.add('(')
+                        for (j in 1..repeatTime){
+                            //构造单个\d
+                            var escapeToRange :MutableList<Char> = mutableListOf() //用于存放各种不同转义后的对应关系
+                            when(pattern[i-1]){
+                                'd' -> for (t in '0'..'9'){
+                                    escapeToRange.add(t)
+                                }
+                                'w' -> {
+                                    for (t in 'a'..'z'){
+                                        escapeToRange.add(t)
+                                    }
+                                    for (t in 'A'..'Z'){
+                                        escapeToRange.add(t)
+                                    }
+                                }
+                                's' -> escapeToRange = mutableListOf<Char>('\t', '\n', ' ')
+                            }
+                            opStack.add('(') //压入'(', 方便转换为(||||)形式
+                            for (ch in escapeToRange){
+                                createSingleSubGraph(ch, subGraphStack)
 
-                opStack.add('(') //压入'(', 方便转换为(||||)形式
-
-                for (repeatTime in minReapt..maxReapt){
-                    opStack.add('{')
-
-                    for (j in 1..repeatTime) {
-                        createSingleSubGraph(repeatChar, subGraphStack)
-                        if (j != repeatTime)
-                            push_op('-', opStack, subGraphStack)
+                                if (ch != escapeToRange.last()) {
+                                    push_op('|', opStack, subGraphStack)
+                                }
+                            }
+                            while (opStack.last() != '('){
+                                val op = opStack.removeAt(opStack.lastIndex)
+                                mergeSubGraph(op, subGraphStack)
+                            }
+                            opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
+                            //将\d\d\d与前面\d\d连接起来
+                            if (j != repeatTime)
+                                push_op('-', opStack, subGraphStack)
+                        }
+                        while (opStack.last() != '(') {
+                            val op = opStack.removeAt(opStack.lastIndex)
+                            mergeSubGraph(op, subGraphStack)
+                        }
+                        opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
+                        //再将aaa与前面的aa相连接 变成a|aa|aaa
+                        if (repeatTime != maxReapt) {
+                            push_op('|', opStack, subGraphStack)
+                        }
                     }
 
-                    while (opStack.last() != '{') {
+                    while (opStack.last() != '(') {
                         val op = opStack.removeAt(opStack.lastIndex)
                         mergeSubGraph(op, subGraphStack)
                     }
+                    opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
+                    addCat = true
+                    i += 5
+                    continue
 
-                    opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'{'
 
-                    if (repeatTime != maxReapt) {
-                        push_op('|', opStack, subGraphStack)
+                }
+
+                else {
+                    val minReapt = pattern[i + 1].toInt() - '0'.toInt()
+                    val maxReapt = pattern[i + 3].toInt() - '0'.toInt()
+                    val repeatChar = pattern[i - 1]
+
+                    subGraphStack.removeAt(subGraphStack.lastIndex)
+                    opStack.add('(') //压入'(', 方便转换为(||||)形式
+
+                    for (repeatTime in minReapt..maxReapt) {
+                        //先生成成类似于aaa
+                        opStack.add('(')
+                        for (j in 1..repeatTime) {
+                            createSingleSubGraph(repeatChar, subGraphStack)
+                            if (j != repeatTime)
+                                push_op('-', opStack, subGraphStack)
+                        }
+                        while (opStack.last() != '(') {
+                            val op = opStack.removeAt(opStack.lastIndex)
+                            mergeSubGraph(op, subGraphStack)
+                        }
+                        opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
+                        //再将aaa与前面的aa相连接 变成a|aa|aaa
+                        if (repeatTime != maxReapt) {
+                            push_op('|', opStack, subGraphStack)
+                        }
                     }
-                }
 
-                while (opStack.last() != '('){
-                    val op = opStack.removeAt(opStack.lastIndex)
-                    mergeSubGraph(op, subGraphStack)
+                    while (opStack.last() != '(') {
+                        val op = opStack.removeAt(opStack.lastIndex)
+                        mergeSubGraph(op, subGraphStack)
+                    }
+                    opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
+                    addCat = true
+                    i += 5
+                    continue
                 }
-                opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
-                addCat = true
-                i += 5
-                continue
             }
         }
 
         else{
+            //这个不是其他特殊符号,是单个文本字符
             isOp = false
         }
 
