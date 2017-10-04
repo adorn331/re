@@ -20,19 +20,7 @@ class Node(val inEdges: MutableList<Edge> = mutableListOf<Edge>(),
         this.outEdges.add(outEdge)
     }
 
-    //用于汤普森算法合并子图
-    fun merge(node: Node){
-        this.end = node.end
-
-        for (edge in this.outEdges){
-            node.outEdges.add(edge)
-        }
-        for (edge in this.inEdges){
-            node.inEdges.add(edge)
-        }
-    }
-
-    //查看这个节点通过非epsilon边可以到达的节点集合
+    //查看这个nfa节点通过非epsilon边可以到达的节点集合
     fun nextNodes (v: Char) :MutableSet<Node>{
         val nodeList = mutableSetOf<Node>()
         for (edge in this.outEdges)
@@ -41,6 +29,7 @@ class Node(val inEdges: MutableList<Edge> = mutableListOf<Edge>(),
         return nodeList
     }
 
+    //用于dfa图中的转移状态
     fun nextNode (v: Char) :Node?{
         for (edge in this.outEdges)
             if (edge.value == v)
@@ -107,57 +96,48 @@ fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
         '*' -> {
             //取出栈顶的一个子图做闭包
             val subGraph = subGraphStack.last()
-//            subGraphStack.removeAt(subGraphStack.lastIndex)
             val startNode = subGraph[0]
             val endNode = subGraph[1]
-//            endNode.end = false
-//
-//            val newStartNode = Node()
-//            val newEndNode = Node(end=true)
-//            Edge(null, startNode, endNode)
-//            Edge(null, newStartNode, newEndNode)
-//            Edge(null, newStartNode, startNode)
-//            Edge(null, endNode, newEndNode)
+
             Edge(null, startNode, endNode)
             Edge(null, endNode, startNode)
-//            subGraphStack.add(listOf(newStartNode, newEndNode))
         }
 
         '?' -> {
             val subGraph = subGraphStack.last()
-//            subGraphStack.removeAt(subGraphStack.lastIndex)
             val startNode = subGraph[0]
             val endNode = subGraph[1]
             Edge(null, startNode, endNode)
-//            endNode.end = false
-//
-//            val newStartNode = Node()
-//            val newEndNode = Node(end=true)
-//            Edge(null, newStartNode, newEndNode)
-//            Edge(null, newStartNode, startNode)
-//            Edge(null, endNode, newEndNode)
-//
-//            subGraphStack.add(listOf(newStartNode, newEndNode))
+
         }
 
         '+' -> {
             //取出栈顶的一个子图做闭包
             val subGraph = subGraphStack.last()
-//            subGraphStack.removeAt(subGraphStack.lastIndex)
             val startNode = subGraph[0]
             val endNode = subGraph[1]
             Edge(null, endNode, startNode)
-//            endNode.end = false
-//
-//            val newStartNode = Node()
-//            val newEndNode = Node(end=true)
-//            Edge(null, startNode, endNode)
-//            Edge(null, newStartNode, startNode)
-//            Edge(null, endNode, newEndNode)
-//
-//            subGraphStack.add(listOf(newStartNode, newEndNode))
         }
     }
+}
+
+//根据一个值,构造只有一个开始节点一个结束节点和一条转移边的最基本nfa子图(后面用于各种子图合并)
+fun createSingleSubGraph(value: Char, subGraphStack: MutableList<List<Node>>){
+        val startNode = Node()
+        val endNode = Node(end=true)
+        Edge(value, startNode, endNode)
+        subGraphStack.add(listOf(startNode, endNode))
+}
+
+
+//用于将一个新的"操作符"压入栈中
+//根据类似于逆波兰表达式原理, 栈顶的优先级应该比栈底的高,否则一直弹出栈内操作符直到可以放入位置
+fun push_op(operator: Char, opStack: MutableList<Char>, subGraphStack: MutableList<List<Node>>){
+        while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[operator]!!) {
+            val op = opStack.removeAt(opStack.lastIndex)
+            mergeSubGraph(op, subGraphStack)
+        }
+        opStack.add(operator)
 }
 
 //正则表达式转换为NFA图
@@ -181,25 +161,18 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             isOp = true
         }
         else if (token == '('){
-            if (addCat){
+            if (addCat)
                 //补充此字符与前一个字符默认"隐藏的"连接符
-                val catOp = if (!inBracket) '-' else '|'
-                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!) {
-                    val op = opStack.removeAt(opStack.lastIndex)
-                    mergeSubGraph(op, subGraphStack)
-                }
-                opStack.add(catOp)
-            }
+                push_op(if (!inBracket) '-' else '|', opStack, subGraphStack)
             opStack.add(token)
+
             addCat = false
-            //isFirst = false
             i += 1
             continue
         }
         else if (token == ')'){
             while (opStack[opStack.lastIndex] != '('){
-                val op = opStack[opStack.lastIndex]
-                opStack.removeAt(opStack.lastIndex)
+                val op = opStack.removeAt(opStack.lastIndex)
                 mergeSubGraph(op, subGraphStack)
             }
             opStack.removeAt(opStack.lastIndex) //弹出'('
@@ -211,15 +184,9 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
         //使用类似与()的处理方法
         //思路:将[abc] 处理为 (a|b|c)
         else if (token == '['){
-            if (addCat){
+            if (addCat)
                 //补充此字符与前一个字符默认"隐藏的"连接符
-                val addOp = if (!inBracket) '-' else '|'
-                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[addOp]!!) {
-                    val op = opStack.removeAt(opStack.lastIndex)
-                    mergeSubGraph(op, subGraphStack)
-                }
-                opStack.add(addOp)
-            }
+                push_op('-', opStack, subGraphStack)
             opStack.add(token)
             addCat = false
             inBracket = true
@@ -229,8 +196,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
 
         else if (token == ']'){
             while (opStack[opStack.lastIndex] != '['){
-                val op = opStack[opStack.lastIndex]
-                opStack.removeAt(opStack.lastIndex)
+                val op = opStack.removeAt(opStack.lastIndex)
                 mergeSubGraph(op, subGraphStack)
             }
             opStack.removeAt(opStack.lastIndex) //弹出'['
@@ -248,16 +214,8 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
 
             for (current in start + 1..end - 1){
                 val ch = current.toChar()
-                val orOp = '|'
-                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[orOp]!!){
-                    val op = opStack.removeAt(opStack.lastIndex)
-                    mergeSubGraph(op, subGraphStack)
-                }
-                opStack.add(orOp)
-                val startNode = Node()
-                val endNode = Node(end=true)
-                Edge(ch, startNode, endNode)
-                subGraphStack.add(listOf(startNode, endNode))
+                push_op('|', opStack, subGraphStack)
+                createSingleSubGraph(ch, subGraphStack)
             }
 
             addCat = true
@@ -267,39 +225,21 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
 
         //思路:转化为(`|.|a..|b|...|0|..) 将所有的支持字符并联
         else if (token == '.'){
-            if (addCat){
+            if (addCat)
                 //补充此字符与前一个字符默认"隐藏的"连接符
-                val addOp = if (!inBracket) '-' else '|'
-                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[addOp]!!) {
-                    val op = opStack.removeAt(opStack.lastIndex)
-                    mergeSubGraph(op, subGraphStack)
-                }
-                opStack.add(addOp)
-            }
+                push_op(if (!inBracket) '-' else '|' ,opStack, subGraphStack)
 
             opStack.add('(')    //压入'(', 方便转换为(||||)形式
 
             for (current in 31..127){
                 val ch = current.toChar()
-
-                val startNode = Node()
-                val endNode = Node(end=true)
-                Edge(ch, startNode, endNode)
-                subGraphStack.add(listOf(startNode, endNode))
-
-                if (current != 127) {
-                    val orOp = '|'
-                    while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[orOp]!!) {
-                        val op = opStack.removeAt(opStack.lastIndex)
-                        mergeSubGraph(op, subGraphStack)
-                    }
-                    opStack.add(orOp)
-                }
+                createSingleSubGraph(ch, subGraphStack)
+                if (current != 127)
+                    push_op('|', opStack, subGraphStack)
             }
 
             while (opStack.last() != '('){
-                val op = opStack.last()
-                opStack.removeAt(opStack.lastIndex)
+                val op = opStack.removeAt(opStack.lastIndex)
                 mergeSubGraph(op, subGraphStack)
             }
 
@@ -316,15 +256,9 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             if (pattern[i + 1] in escapeTokens){
                 //发生转义,转义到另一些字符集和
 
-                if (addCat){
+                if (addCat)
                     //补充此字符与前一个字符默认"隐藏的"连接符
-                    val addOp = if (!inBracket) '-' else '|'
-                    while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[addOp]!!) {
-                        val op = opStack.removeAt(opStack.lastIndex)
-                        mergeSubGraph(op, subGraphStack)
-                    }
-                    opStack.add(addOp)
-                }
+                    push_op(if (!inBracket) '-' else '|', opStack, subGraphStack)
 
                 var escapeToRange :MutableList<Char> = mutableListOf() //用于存放各种不同转义后的对应关系
                 when(pattern[i+1]){
@@ -343,25 +277,15 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
                 opStack.add('(') //压入'(', 方便转换为(||||)形式
 
                 for (ch in escapeToRange){
-
-                    val startNode = Node()
-                    val endNode = Node(end=true)
-                    Edge(ch, startNode, endNode)
-                    subGraphStack.add(listOf(startNode, endNode))
+                    createSingleSubGraph(ch, subGraphStack)
 
                     if (ch != escapeToRange.last()) {
-                        val orOp = '|'
-                        while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[orOp]!!) {
-                            val op = opStack.removeAt(opStack.lastIndex)
-                            mergeSubGraph(op, subGraphStack)
-                        }
-                        opStack.add(orOp)
+                       push_op('|', opStack, subGraphStack)
                     }
                 }
 
                 while (opStack.last() != '('){
-                    val op = opStack.last()
-                    opStack.removeAt(opStack.lastIndex)
+                    val op = opStack.removeAt(opStack.lastIndex)
                     mergeSubGraph(op, subGraphStack)
                 }
 
@@ -372,20 +296,10 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
 
             }
             else if (pattern[i + 1] in operator_priority.keys){   //反斜杠用于转义操作符号, 将其当做单个普通字符处理不起特殊作用
-                if (addCat){
-                    //补充此字符与前一个字符默认"隐藏的"连接符
-                    val catOp = if (!inBracket) '-' else '|'
-                    while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!){
-                        val op = opStack.removeAt(opStack.lastIndex)
-                        mergeSubGraph(op, subGraphStack)
-                    }
-                    opStack.add(catOp)
-                }
+                if (addCat)
+                    push_op(if (!inBracket) '-' else '|', opStack, subGraphStack)
                 //单个字符构造最基本的子图
-                val startNode = Node()
-                val endNode = Node(end=true)
-                Edge(pattern[i + 1], startNode, endNode)
-                subGraphStack.add(listOf(startNode, endNode))
+                createSingleSubGraph(pattern[i + 1], subGraphStack)
                 addCat = true
 
                 i += 2 //跳过它以免发生修饰符作用
@@ -400,40 +314,23 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
                 continue
             }
              */
-
         }
-
 
         else{
             isOp = false
         }
 
         //中缀表达式与后缀表达式原理, 例如逆波兰表达式
-        if (isOp){
-            while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[token]!!){
-                val op = opStack.removeAt(opStack.lastIndex)
-                mergeSubGraph(op, subGraphStack)
-            }
-            opStack.add(token)
-            isOp = false
-        }
+        if (isOp)
+            push_op(token, opStack, subGraphStack)
+
 
         else{//是字符
-            if (addCat){
+            if (addCat)
                 //补充此字符与前一个字符默认"隐藏的"连接符
-                val catOp = if (!inBracket) '-' else '|'
-                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!){
-                    val op = opStack.removeAt(opStack.lastIndex)
-                    mergeSubGraph(op, subGraphStack)
-                }
-                opStack.add(catOp)
-            }
+                push_op(if (!inBracket) '-' else '|', opStack, subGraphStack)
             //单个字符构造最基本的子图
-            val startNode = Node()
-            val endNode = Node(end=true)
-            Edge(token, startNode, endNode)
-            subGraphStack.add(listOf(startNode, endNode))
-            //isFirst =  false
+            createSingleSubGraph(token, subGraphStack)
             addCat = true
 
         }
@@ -442,8 +339,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
 
     //将符号栈内所剩的符号应用后清空栈
     while (!opStack.isEmpty()){
-        val op = opStack.last()
-        opStack.removeAt(opStack.lastIndex)
+        val op = opStack.removeAt(opStack.lastIndex)
         mergeSubGraph(op, subGraphStack)
     }
 
