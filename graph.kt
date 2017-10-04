@@ -1,9 +1,9 @@
 import kotlin.concurrent.fixedRateTimer
 
-val operator_priority = mapOf('(' to -1, '[' to -1, '|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3)
+val operator_priority = mapOf('(' to -1, '[' to -1,'{' to -1, '|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3)
 // 三种基本的符号：或 连接 闭包
 
-val escapeTokens =  setOf('w', 'd', 'W', 's') //转义字符集
+val escapeTokens =  setOf('w', 'd', 's') //转义字符集
 
 
 class Node(val inEdges: MutableList<Edge> = mutableListOf<Edge>(),
@@ -265,11 +265,13 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
                     'd' -> for (t in '0'..'9'){
                         escapeToRange.add(t)
                     }
-                    'w' -> for (t in 'a'..'z'){
-                        escapeToRange.add(t)
-                    }
-                    'W' -> for (t in 'A'..'Z'){
-                        escapeToRange.add(t)
+                    'w' -> {
+                        for (t in 'a'..'z'){
+                          escapeToRange.add(t)
+                        }
+                        for (t in 'A'..'Z'){
+                           escapeToRange.add(t)
+                         }
                     }
                     's' -> escapeToRange = mutableListOf<Char>('\t', '\n', ' ')
                 }
@@ -316,6 +318,37 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
              */
         }
 
+        else if (token == '{'){
+            //{n}的情况
+            if (pattern[i + 2] == '{'){
+
+            }
+            if (pattern[i+2] == '}'){
+                val repeatChar = pattern[i - 1]
+                val repeatTime = pattern[i + 1].toInt() - '0'.toInt()
+                opStack.add('{')
+                subGraphStack.removeAt(subGraphStack.lastIndex)
+
+                for (j in 1..repeatTime){
+                    createSingleSubGraph(repeatChar, subGraphStack)
+                    if (j != repeatTime)
+                        push_op('-', opStack, subGraphStack)
+                }
+
+                while (opStack.last() != '{'){
+                    val op = opStack.removeAt(opStack.lastIndex)
+                    mergeSubGraph(op, subGraphStack)
+                }
+
+                opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'{'
+                addCat = true
+                i += 3
+                continue
+            }
+
+
+        }
+
         else{
             isOp = false
         }
@@ -325,7 +358,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             push_op(token, opStack, subGraphStack)
 
 
-        else{//是字符
+        else{//是单个字符
             if (addCat)
                 //补充此字符与前一个字符默认"隐藏的"连接符
                 push_op(if (!inBracket) '-' else '|', opStack, subGraphStack)
