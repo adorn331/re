@@ -318,9 +318,9 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
              */
         }
 
-        else if (token == '{'){
 
-            //{n}的情况
+        else if (token == '{'){
+            //{n}的情况,转化为nfa子图中n个串联 例如a{3} --> aaa  \d{3} --> \d\d\d
             if (pattern[i+2] == '}'){
                 //是转义字符集的重复次数,例如\d{3}
                 if (i >= 2 && pattern[i - 2] == '\\' && pattern[i - 1] in escapeTokens){
@@ -402,6 +402,49 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
                     i += 3
                     continue
                 }
+            }
+
+            //对应情况{n,m}
+            //思路示意: a{1,3} --> (a|aa|aaa)
+            else if (pattern[i + 2] == ',' && pattern[i + 3] != '}'){
+                val minReapt = pattern[i + 1].toInt() - '0'.toInt()
+                val maxReapt = pattern[i + 3].toInt() - '0'.toInt()
+                val repeatChar = pattern[i - 1]
+
+                subGraphStack.removeAt(subGraphStack.lastIndex)
+
+
+                opStack.add('(') //压入'(', 方便转换为(||||)形式
+
+                for (repeatTime in minReapt..maxReapt){
+                    opStack.add('{')
+
+                    for (j in 1..repeatTime) {
+                        createSingleSubGraph(repeatChar, subGraphStack)
+                        if (j != repeatTime)
+                            push_op('-', opStack, subGraphStack)
+                    }
+
+                    while (opStack.last() != '{') {
+                        val op = opStack.removeAt(opStack.lastIndex)
+                        mergeSubGraph(op, subGraphStack)
+                    }
+
+                    opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'{'
+
+                    if (repeatTime != maxReapt) {
+                        push_op('|', opStack, subGraphStack)
+                    }
+                }
+
+                while (opStack.last() != '('){
+                    val op = opStack.removeAt(opStack.lastIndex)
+                    mergeSubGraph(op, subGraphStack)
+                }
+                opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
+                addCat = true
+                i += 5
+                continue
             }
         }
 
