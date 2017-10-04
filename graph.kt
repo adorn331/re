@@ -442,6 +442,12 @@ fun nfa2DFA(nfaStart: Node): Node{
         exitDfaNodes.add(currentSet to currentDfaNode)
         exitDfaSets.add(currentSet)
 
+        //当前dfa集中包含了结束状态的nfa节点时,它也应该是结束状态
+        for (nfaNode in currentSet){
+            if (nfaNode.end)
+                currentDfaNode.end = true
+        }
+
         val alphaSet = mutableSetOf<Char>()     //存放可以到达的字符
         for (alpha in 31.toChar()..127.toChar()){   //支持所有可见ASCII字符集
             for (nfaNode in currentSet){
