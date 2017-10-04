@@ -72,7 +72,7 @@ fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
             //串联两个子图
             //endNode1.merge(startNode2)
 
-            endNode1.end = false
+            endNode1.end = startNode1.end
             Edge(null, endNode1, startNode2)
             subGraphStack.add(listOf(startNode1, endNode2))
         }
@@ -176,9 +176,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
         else if (token == '*' || token == '?' || token == '+'){
             isOp = true
         }
-        //括号有bug!!!!!!!!!!!, 特别是后面是+*重复的时候, 后面的字符不能组成一簇和括号里面的配对
         else if (token == '('){
-            //补充is_first判断!!!!!!!!!****** --()*的时候出错
             if (addCat){
                 //默认要与前一个补全"隐藏的"连接符
                 val catOp = if (!inBracket) '-' else '|'
@@ -342,13 +340,13 @@ fun nfa2DFA(nfaStart: Node): Node{
                             newNode.end = true //这个dfa节点集中包含了原来nfa的结束节点的话那么抽象出来的dfa节点也是结束节点
                     }
 
-                    //有可能这个新的dfa节点就是自己本身,也就是要加一条回环边
-                    var is_self = true
+                    //有可能指向自己本身,也就是dfa要加一条回环边
+                    var to_self = false
                     for (node in newSet){
-                        if (node !in currentSet)
-                            is_self = false
+                        if (node in currentSet)
+                            to_self = true
                     }
-                    if (is_self)
+                    if (to_self)
                         Edge(alpha, currentDfaNode, currentDfaNode)
                     else
                         Edge(alpha, currentDfaNode, newNode)
