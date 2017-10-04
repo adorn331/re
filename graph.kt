@@ -3,6 +3,7 @@ import kotlin.concurrent.fixedRateTimer
 val operator_priority = mapOf('(' to -1, '[' to -1, '|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3)
 // 三种基本的符号：或 连接 闭包
 
+//val escapeToken = mapOf<>()
 
 class Node(val inEdges: MutableList<Edge> = mutableListOf<Edge>(),
            val outEdges: MutableList<Edge> = mutableListOf<Edge>(), var end: Boolean=false){
@@ -239,19 +240,6 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             val start = pattern[i - 1].toInt()
             val end = pattern[i + 1].toInt()
 
-//            if (addCat){
-//                //补充此字符与前一个字符默认"隐藏的"连接符
-//                val catOp = if (!inBracket) '-' else '|'
-//                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!){
-//                    val op = opStack.removeAt(opStack.lastIndex)
-//                    mergeSubGraph(op, subGraphStack)
-//                }
-//                opStack.add(catOp)
-//            }
-//
-//            //构造这些全部并联的nfa子图
-//            val newStartNode = Node()
-//            val newEndNode = Node(end=true)
             for (current in start + 1..end - 1){
                 val ch = current.toChar()
                 val orOp = '|'
@@ -266,8 +254,52 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
                 subGraphStack.add(listOf(startNode, endNode))
             }
 
-            //要与后面的连接
-           // addCat = true
+            addCat = true
+            continue
+        }
+
+        //思路:转化为(`|.|a..|b|...|0|..) 将所有的支持字符并联
+        else if (token == '.'){
+            if (addCat){
+                //补充此字符与前一个字符默认"隐藏的"连接符
+                val addOp = if (!inBracket) '-' else '|'
+                while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[addOp]!!) {
+                    val op = opStack.removeAt(opStack.lastIndex)
+                    mergeSubGraph(op, subGraphStack)
+                }
+                opStack.add(addOp)
+            }
+
+            opStack.add('(')
+
+            for (current in 31..127){
+                val ch = current.toChar()
+
+                val startNode = Node()
+                val endNode = Node(end=true)
+                Edge(ch, startNode, endNode)
+                subGraphStack.add(listOf(startNode, endNode))
+
+                if (current != 127) {
+                    val orOp = '|'
+                    while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[orOp]!!) {
+                        val op = opStack.removeAt(opStack.lastIndex)
+                        mergeSubGraph(op, subGraphStack)
+                    }
+                    opStack.add(orOp)
+                }
+            }
+
+            while (opStack.last() != '('){
+                val op = opStack.last()
+                opStack.removeAt(opStack.lastIndex)
+                mergeSubGraph(op, subGraphStack)
+            }
+
+            opStack.removeAt(opStack.lastIndex)
+//            opStack.removeAt(opStack.lastIndex)
+
+            addCat = true
             continue
         }
 
@@ -382,7 +414,7 @@ fun nfa2DFA(nfaStart: Node): Node{
         exitDfaSets.add(currentSet)
 
         val alphaSet = mutableSetOf<Char>()     //存放可以到达的字符
-        for (alpha in 1.toChar()..256.toChar()){
+        for (alpha in 31.toChar()..127.toChar()){   //支持所有可见ASCII字符集
             for (nfaNode in currentSet){
                 if (!nfaNode.nextNodes(alpha).isEmpty())
                     alphaSet.add(alpha)
