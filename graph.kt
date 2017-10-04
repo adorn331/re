@@ -3,7 +3,8 @@ import kotlin.concurrent.fixedRateTimer
 val operator_priority = mapOf('(' to -1, '[' to -1, '|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3)
 // 三种基本的符号：或 连接 闭包
 
-//val escapeToken = mapOf<>()
+val escapeTokens =  setOf('w', 'd', 'W', 's') //转义字符集
+
 
 class Node(val inEdges: MutableList<Edge> = mutableListOf<Edge>(),
            val outEdges: MutableList<Edge> = mutableListOf<Edge>(), var end: Boolean=false){
@@ -168,7 +169,8 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
     var inBracket = false //标志是否在[]当中, 是的话字符间的连接不应该默认是'-'而应该默认是'|'
     var addCat = false //确认是否需要补上字符间默认的连接符'-'
 
-    for (i in 0..pattern.length - 1){
+    var i = 0
+    while (i < pattern.length){
         val token = pattern[i]
 
         if (token == '|'){
@@ -191,6 +193,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             opStack.add(token)
             addCat = false
             //isFirst = false
+            i += 1
             continue
         }
         else if (token == ')'){
@@ -201,6 +204,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             }
             opStack.removeAt(opStack.lastIndex) //弹出'('
             addCat = true
+            i += 1
             continue
         }
 
@@ -219,6 +223,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             opStack.add(token)
             addCat = false
             inBracket = true
+            i += 1
             continue
         }
 
@@ -231,6 +236,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             opStack.removeAt(opStack.lastIndex) //弹出'['
             addCat = true
             inBracket = false
+            i += 1
             continue
         }
 
@@ -255,6 +261,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             }
 
             addCat = true
+            i += 1
             continue
         }
 
@@ -270,7 +277,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
                 opStack.add(addOp)
             }
 
-            opStack.add('(')
+            opStack.add('(')    //压入'(', 方便转换为(||||)形式
 
             for (current in 31..127){
                 val ch = current.toChar()
@@ -296,13 +303,105 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
                 mergeSubGraph(op, subGraphStack)
             }
 
-            opStack.removeAt(opStack.lastIndex)
-//            opStack.removeAt(opStack.lastIndex)
-
+            opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
             addCat = true
+            i += 1
             continue
         }
 
+        //处理转义
+        //思路:'\d'转换为(0|1|...9)等
+        else if (token == '\\'){
+
+            if (pattern[i + 1] in escapeTokens){
+                //发生转义,转义到另一些字符集和
+
+                if (addCat){
+                    //补充此字符与前一个字符默认"隐藏的"连接符
+                    val addOp = if (!inBracket) '-' else '|'
+                    while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[addOp]!!) {
+                        val op = opStack.removeAt(opStack.lastIndex)
+                        mergeSubGraph(op, subGraphStack)
+                    }
+                    opStack.add(addOp)
+                }
+
+                var escapeToRange :MutableList<Char> = mutableListOf() //用于存放各种不同转义后的对应关系
+                when(pattern[i+1]){
+                    'd' -> for (t in '0'..'9'){
+                        escapeToRange.add(t)
+                    }
+                    'w' -> for (t in 'a'..'z'){
+                        escapeToRange.add(t)
+                    }
+                    'W' -> for (t in 'A'..'Z'){
+                        escapeToRange.add(t)
+                    }
+                    's' -> escapeToRange = mutableListOf<Char>('\t', '\n', ' ')
+                }
+
+                opStack.add('(') //压入'(', 方便转换为(||||)形式
+
+                for (ch in escapeToRange){
+
+                    val startNode = Node()
+                    val endNode = Node(end=true)
+                    Edge(ch, startNode, endNode)
+                    subGraphStack.add(listOf(startNode, endNode))
+
+                    if (ch != escapeToRange.last()) {
+                        val orOp = '|'
+                        while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[orOp]!!) {
+                            val op = opStack.removeAt(opStack.lastIndex)
+                            mergeSubGraph(op, subGraphStack)
+                        }
+                        opStack.add(orOp)
+                    }
+                }
+
+                while (opStack.last() != '('){
+                    val op = opStack.last()
+                    opStack.removeAt(opStack.lastIndex)
+                    mergeSubGraph(op, subGraphStack)
+                }
+
+                opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
+                addCat = true
+                i += 2
+                continue
+
+            }
+            else if (pattern[i + 1] in operator_priority.keys){   //反斜杠用于转义操作符号, 将其当做单个普通字符处理不起特殊作用
+                if (addCat){
+                    //补充此字符与前一个字符默认"隐藏的"连接符
+                    val catOp = if (!inBracket) '-' else '|'
+                    while (!opStack.isEmpty() && operator_priority[opStack.last()]!! >= operator_priority[catOp]!!){
+                        val op = opStack.removeAt(opStack.lastIndex)
+                        mergeSubGraph(op, subGraphStack)
+                    }
+                    opStack.add(catOp)
+                }
+                //单个字符构造最基本的子图
+                val startNode = Node()
+                val endNode = Node(end=true)
+                Edge(pattern[i + 1], startNode, endNode)
+                subGraphStack.add(listOf(startNode, endNode))
+                addCat = true
+
+                i += 2 //跳过它以免发生修饰符作用
+                continue
+            }
+            else{ //反斜杠无任何效果, 当做普通字符匹配处理
+                isOp = false
+            }
+            /*若需跳过其不匹配, 则应该是
+            else{
+                i += 1
+                continue
+            }
+             */
+
+        }
 
 
         else{
@@ -338,6 +437,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
             addCat = true
 
         }
+        i += 1
     }
 
     //将符号栈内所剩的符号应用后清空栈
