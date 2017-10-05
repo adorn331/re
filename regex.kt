@@ -1,4 +1,3 @@
-
 class Match(val text: String,val start: Int,val end: Int){
     override fun toString(): String {
         return "<Match(${this.start},${this.end + 1}): \"${text.subSequence(start, end + 1)}\">"
@@ -11,7 +10,17 @@ fun match(pattern:String, text: String?) :Match?{
     if (text == null)
         return null
 
-    val nfaStartNode = re2NFA(pattern)[0][0] //构造nfa图并拿到其头节点
+    val matchHead = pattern[0] == '^' //标志是否有$修饰,需要匹配到开头
+    val matchTail = pattern.last() == '$' //标志是否有$修饰,需要匹配到结尾
+
+    var matchPattern :String  = pattern //存放真正要去匹配的表达式,除去^和$
+    if (matchHead)
+        matchPattern = matchPattern.substring(1, matchPattern.length)
+    if (matchTail)
+        matchPattern = matchPattern.substring(0, matchPattern.length - 1)
+
+
+    val nfaStartNode = re2NFA(matchPattern)[0][0] //构造nfa图并拿到其头节点
     val dfaStartNode = nfa2DFA(nfaStartNode) //将nfa图转换为dfa图拿到dfa图头节点开始匹配状态
     var dfaNode: Node? = dfaStartNode  //匹配中不断跳转的dfa节点
 
@@ -26,23 +35,22 @@ fun match(pattern:String, text: String?) :Match?{
         if (dfaNode != null){
             val nextNode = dfaNode.nextNode(text[endPos])
 
+            if ( matchTail && nextNode == null )
+                return null         //存在$需要匹配到底而存在一个字符不能跳转dfa状态, 直接match失败
             if (nextNode!= null && nextNode.end == true){
                 matchStack.clear()
-                matchStack.add(endPos) //压入已经匹配的位置方便以后回溯,
+                matchStack.add(endPos) //压入已经匹配的位置方便以后回溯
             }
         }
 
         else
-            break//现字符在dfa中没这条跳转边,只能回溯查看栈中是否有之前已经匹配成功的
-
+            break //有字符跳转状态,跳出循环回溯之前是否已经有匹配的地方
 
         dfaNode = dfaNode.nextNode(text[endPos])
         endPos += 1
     }
 
-
     return if (matchStack.isEmpty()) null else Match(text, startPos, matchStack.last())
-
 }
 
 
