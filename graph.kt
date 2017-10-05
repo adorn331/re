@@ -1,6 +1,6 @@
 import kotlin.concurrent.fixedRateTimer
 
-val operator_priority = mapOf('(' to -1, '[' to -1,'{' to -1, '|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3)
+val operator_priority = mapOf('(' to -1, '[' to -1,'{' to -1, '|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3, '.' to 0)
 // 三种基本的符号：或 连接 闭包
 
 val escapeTokens =  setOf('w', 'd', 's') //转义字符集
@@ -598,7 +598,7 @@ fun nfa2DFA(nfaStart: Node): Node{
     var currentSet :MutableSet<Node>   //作为dfa起始子集
     var currentDfaNode: Node   //DFA中的一个抽象出的节点
 
-    val dfaStart  = Node()//DFA节点虽然是子集但仍最后抽象成一个点, 这个节点也是最终返回的
+    val dfaStart  = Node()//DFA节点虽然是子集但仍最后抽象成一个点, 这个节点也是最终返回的值
     watingQueue.add(epsClosure(nfaStart) to dfaStart)
 
     while (!watingQueue.isEmpty()) {
@@ -611,9 +611,11 @@ fun nfa2DFA(nfaStart: Node): Node{
 
         //当前dfa集中包含了结束状态的nfa节点时,它也应该是结束状态
         for (nfaNode in currentSet){
-            if (nfaNode.end)
+            if (nfaNode.end) {
                 currentDfaNode.end = true
+            }
         }
+
 
         val alphaSet = mutableSetOf<Char>()     //存放可以到达的字符
         for (alpha in 32.toChar()..126.toChar()){   //支持所有可见ASCII字符集
@@ -644,33 +646,4 @@ fun nfa2DFA(nfaStart: Node): Node{
     }
 
     return dfaStart
-}
-
-fun main(args: Array<String>) {
-
-    while (true) {
-        val re = readLine()!!
-        val text: String? = readLine()
-        if (text == null)
-            return
-
-        val nfaStartNode = re2NFA(re)[0][0]
-        val dfaStartNode = nfa2DFA(nfaStartNode)
-        var dfaNode: Node? = dfaStartNode
-
-        var startPos = 0
-        var endPos = 0
-
-        while (endPos < text.length) {
-            if (dfaNode!!.nextNode(text[endPos]) != null) {
-                val c = text[endPos]
-                endPos += 1
-                dfaNode = dfaNode.nextNode(c)
-
-            } else
-                break
-        }
-
-        println(endPos)
-    }
 }
