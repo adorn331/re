@@ -52,7 +52,7 @@ fun match(pattern:String, text: String?) :Match?{
 }
 
 //返回text中所有与pattern相匹配的全部字串，返回形式为一个Match对象的集合
-fun searchAll(pattern:String, text: String?): MutableSet<Match>?{
+fun findAll(pattern:String, text: String?): MutableSet<Match>?{
     if (text == null)
         return null
 
@@ -108,6 +108,8 @@ fun searchAll(pattern:String, text: String?): MutableSet<Match>?{
 }
 
 
+
+
 fun main(args: Array<String>) {
 
     while (true) {
@@ -117,7 +119,7 @@ fun main(args: Array<String>) {
 //        val m = match(re, text)
 //        println(m)
 
-        val a = searchAll(re, text)
+        val a = findAll(re, text)
         println(a)
 
     }
