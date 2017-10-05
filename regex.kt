@@ -108,6 +108,60 @@ fun findAll(pattern:String, text: String?): MutableSet<Match>?{
 }
 
 
+//若text中包含pattern子串，有则返回Match对象，否则返回None，如果text中存在多个pattern子串，只返回第一个
+fun search(pattern:String, text: String?): Match?{
+    if (text == null)
+        return null
+
+    //因为是搜索,所以忽略正则表达式中的^和$
+    val matchHead = pattern[0] == '^'
+    val matchTail = pattern.last() == '$'
+    var matchPattern :String  = pattern //存放真正要去匹配的表达式,除去^和$
+    if (matchHead)
+        matchPattern = matchPattern.substring(1, matchPattern.length)
+    if (matchTail)
+        matchPattern = matchPattern.substring(0, matchPattern.length - 1)
+
+    val nfaStartNode = re2NFA(matchPattern)[0][0] //构造nfa图并拿到其头节点
+    val dfaStartNode = nfa2DFA(nfaStartNode) //将nfa图转换为dfa图拿到dfa图头节点开始匹配状态
+    var dfaNode: Node? = dfaStartNode  //匹配中不断跳转的dfa节点
+
+    var startPos = 0
+    var endPos  = 0
+    var i: Int
+
+    val matchStack = mutableListOf<Int>()
+
+    while (endPos < text.length){
+        //endPos = startPos
+        dfaNode = dfaStartNode
+
+        i = endPos
+        while (i < text.length){
+            if (dfaNode != null){
+                val nextNode = dfaNode.nextNode(text[i])
+                if (nextNode!= null && nextNode.end == true){
+                    matchStack.clear()
+                    matchStack.add(i) //压入已经匹配的位置方便以后回溯
+                    endPos = i
+                }
+            }
+            else
+                break //有字符跳转状态,跳出循环回溯之前是否已经有匹配的地方
+            dfaNode = dfaNode.nextNode(text[i])
+            i += 1
+        }
+
+        if (!matchStack.isEmpty()) {
+            return Match(text, startPos, matchStack.last())
+        }else{
+            endPos += 1
+        }
+        startPos = endPos
+    }
+
+    return null
+}
 
 
 fun main(args: Array<String>) {
