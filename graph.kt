@@ -647,3 +647,49 @@ fun nfa2DFA(nfaStart: Node): Node{
 
     return dfaStart
 }
+
+//
+//if (text == null)
+//return null
+//
+//val nfaStartNode = re2NFA(pattern)[0][0] //构造nfa图并拿到其头节点
+//val dfaStartNode = nfa2DFA(nfaStartNode) //将nfa图转换为dfa图拿到dfa图头节点开始匹配状态
+//var dfaNode: Node? = dfaStartNode  //匹配中不断跳转的dfa节点
+//
+//var startPos = 0
+//var endPos  = if (dfaStartNode.end) 0 else -1 //-1表示没有匹配
+//var current = 0
+//
+//val matches = mutableSetOf<Match>() //存放所有匹配的子串
+//
+//
+//while (current < text.length){
+//    var ch = text[current]
+//    if (dfaNode != null){
+//        var nextNode = dfaNode.nextNode(ch)
+//        if (nextNode != null){
+//            current += 1
+//            dfaNode = nextNode
+//            if (nextNode.end)
+//                endPos = current
+//        }
+//        else{
+//            if (endPos != -1){
+//                if (startPos < endPos)
+//                    matches.add(Match(text, startPos, endPos))
+//                startPos = endPos
+//                current = endPos
+//                endPos = -1
+//            }
+//            else{
+//                current += 1
+//                startPos = current
+//            }
+//            dfaNode = dfaStartNode
+//        }
+//    }
+//}
+//
+//if (startPos < endPos)
+//matches.add(Match(text, startPos, endPos))
+//
