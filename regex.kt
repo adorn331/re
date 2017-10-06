@@ -1,6 +1,6 @@
 class Match(val text: String,val start: Int,val end: Int){
     override fun toString(): String {
-        return "<Match(${this.start},${this.end + 1}): \"${text.subSequence(start, end + 1)}\">"
+        return "<Match(${this.start},${this.end}): \"${text.subSequence(start, end)}\">"
     }
 }
 
@@ -16,7 +16,6 @@ fun match(pattern:String, text: String?) :Match?{
         matchPattern = matchPattern.substring(1, matchPattern.length)
     if (matchTail)
         matchPattern = matchPattern.substring(0, matchPattern.length - 1)
-
 
     val nfaStartNode = re2NFA(matchPattern)[0][0] //构造nfa图并拿到其头节点
     val dfaStartNode = nfa2DFA(nfaStartNode) //将nfa图转换为dfa图拿到dfa图头节点开始匹配状态
@@ -48,7 +47,7 @@ fun match(pattern:String, text: String?) :Match?{
         endPos += 1
     }
 
-    return if (matchStack.isEmpty()) null else Match(text, startPos, matchStack.last())
+    return if (matchStack.isEmpty()) null else Match(text, startPos, matchStack.last() + 1)
 }
 
 //返回text中所有与pattern相匹配的全部字串，返回形式为一个Match对象的集合
@@ -96,7 +95,7 @@ fun findAll(pattern:String, text: String?): MutableSet<Match>?{
         }
 
         if (!matchStack.isEmpty()) {
-            matches.add(Match(text, startPos, matchStack.last()))
+            matches.add(Match(text, startPos, matchStack.last() + 1))
             matchStack.clear()
         }else{
             endPos += 1
@@ -153,7 +152,7 @@ fun search(pattern:String, text: String?): Match?{
         }
 
         if (!matchStack.isEmpty()) {
-            return Match(text, startPos, matchStack.last())
+            return Match(text, startPos, matchStack.last() + 1)
         }else{
             endPos += 1
         }
@@ -163,6 +162,24 @@ fun search(pattern:String, text: String?): Match?{
     return null
 }
 
+//替换text中所有与pattern相匹配的全部字串替换为replacement,返回一个替换后的字符串
+fun replace(pattern:String, replacement: String,text: String?): String?{
+    if (text == null)
+        return null
+
+    val matches = findAll(pattern, text)
+    if (matches == null)//没有可以替换的
+        return text
+
+    var newText: String = text
+
+    for (match in matches) {
+        val matchedSubStr = text.subSequence(match.start, match.end).toString()
+        newText = newText.replace(matchedSubStr, replacement)
+    }
+
+    return newText
+}
 
 fun main(args: Array<String>) {
 
@@ -172,9 +189,12 @@ fun main(args: Array<String>) {
 
 //        val m = match(re, text)
 //        println(m)
+//
+//        val a = findAll(re, text)
+//        println(a)
 
-        val a = findAll(re, text)
-        println(a)
+        println(replace(re, "!!!!", text))
 
     }
+
 }
