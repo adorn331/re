@@ -131,6 +131,8 @@ class CompiledRe(val pattern: String){
             }else{
                 endPos += 1
             }
+            if (i == text.length)
+                break
             startPos = endPos
         }
 
@@ -214,7 +216,7 @@ fun main(args: Array<String>) {
 //        val m = match(re, text)
 //        println(m)
 ////
-        val a = findAll(re, text)
+        val a = match(re, text)
         println(a)
 
 //        println(replace(re, "!!!!", text))

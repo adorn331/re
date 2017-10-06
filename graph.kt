@@ -380,7 +380,7 @@ fun re2NFA(pattern: String) :Node{
                 }
 
                 else {
-                    //需要重复的是普通字符,没有转义,或者转义符是用在转义操作符, 并非转义成字符集和
+                    //{n}需要重复的是普通字符,没有转义,或者转义符是用在转义操作符, 并非转义成字符集和
                     val repeatChar = pattern[i - 1]
                     val repeatTime = pattern[i + 1].toInt() - '0'.toInt()
                     opStack.add('{')
@@ -512,6 +512,34 @@ fun re2NFA(pattern: String) :Node{
                     i += 5
                     continue
                 }
+            }
+
+            //对应情况{n,}
+            //思路示意: a{2,} --> aa+  \w --> \w\w+
+            else if (pattern[i + 2] == ',' && pattern[i + 3] == '}'){
+                //{n,}需要重复的是普通字符,没有转义,或者转义符是用在转义操作符, 并非转义成字符集和
+                val repeatChar = pattern[i - 1]
+                val minRepeat = pattern[i + 1].toInt() - '0'.toInt()
+                opStack.add('{')
+                subGraphStack.removeAt(subGraphStack.lastIndex)
+
+                for (j in 1..minRepeat) {
+                    createSingleSubGraph(repeatChar, subGraphStack)
+                    if (j != minRepeat)
+                        push_op('-', opStack, subGraphStack)
+                }
+
+                push_op('+', opStack, subGraphStack)
+
+                while (opStack.last() != '{') {
+                    val op = opStack.removeAt(opStack.lastIndex)
+                    mergeSubGraph(op, subGraphStack)
+                }
+
+                opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'{'
+                addCat = true
+                i += 4
+                continue
             }
         }
 
