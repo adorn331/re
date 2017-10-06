@@ -141,7 +141,7 @@ fun push_op(operator: Char, opStack: MutableList<Char>, subGraphStack: MutableLi
 }
 
 //正则表达式转换为NFA图
-fun re2NFA(pattern: String) :MutableList<List<Node>>{
+fun re2NFA(pattern: String) :Node{
     val subGraphStack: MutableList<List<Node>> = mutableListOf() //存放子图
     val opStack: MutableList<Char> = mutableListOf()    //存放字符间的连接符号
     var isOp = false
@@ -543,7 +543,7 @@ fun re2NFA(pattern: String) :MutableList<List<Node>>{
         mergeSubGraph(op, subGraphStack)
     }
 
-    return subGraphStack
+    return subGraphStack[0][0] //
 }
 
 
