@@ -11,17 +11,6 @@ val sEscapeSet = setOf('\t', '\n', ' ')
 class Node(val inEdges: MutableList<Edge> = mutableListOf<Edge>(),
            val outEdges: MutableList<Edge> = mutableListOf<Edge>(), var end: Boolean=false){
 
-
-//    fun addInEdge(inEdge: Edge){
-//        inEdge.endNode = this
-//        this.inEdges.add(inEdge)
-//    }
-//
-//    fun addOutEdge(outEdge: Edge){
-//        outEdge.startNode = this
-//        this.outEdges.add(outEdge)
-//    }
-
     //查看这个nfa节点通过非epsilon边可以到达的节点集合
     fun nextNodes (v: Char) :MutableSet<Node>{
 
@@ -40,6 +29,7 @@ class Node(val inEdges: MutableList<Edge> = mutableListOf<Edge>(),
             if (edge.value != null && (edge.value == v))
                 return edge.endNode
         }
+        //是转义字符的时候跳转,跳转映射到特定的转义后集合上
         for (edge in this.outEdges){
             if (edge.value != null && edge.value == escapeTokensMap['.'])
                 return edge.endNode
@@ -128,7 +118,6 @@ fun mergeSubGraph(op: Char, subGraphStack: MutableList<List<Node>>){
         }
 
         '+' -> {
-            //取出栈顶的一个子图做闭包
             val subGraph = subGraphStack.last()
             val startNode = subGraph[0]
             val endNode = subGraph[1]
@@ -239,32 +228,8 @@ fun re2NFA(pattern: String) :Node{
             continue
         }
 
-//        //思路:'.' 转化为(`|.|a..|b|...|0|..) 将所有的支持字符并联
-//        else if (token == '.'){
-//            if (addCat)
-//                //补充此字符与前一个字符默认"隐藏的"连接符
-//                push_op(if (!inBracket) '-' else '|' ,opStack, subGraphStack)
-//
-//            opStack.add('(')    //压入'(', 方便转换为(||||)形式
-//
-//            for (current in 32..126){
-//                val ch = current.toChar()
-//                createSingleSubGraph(ch, subGraphStack)
-//                if (current != 126)
-//                    push_op('|', opStack, subGraphStack)
-//            }
-//
-//            while (opStack.last() != '('){
-//                val op = opStack.removeAt(opStack.lastIndex)
-//                mergeSubGraph(op, subGraphStack)
-//            }
-//
-//            opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
-//            addCat = true
-//            i += 1
-//            continue
-//        }
-
+        //原思路:'.' 转化为(`|.|a..|b|...|0|..) 将所有的支持字符并联
+        //新思路:'.'映射为一些特殊不可见ascii字符值保存在边上, 然后节点跳转的时候遇到了这个特殊值默认所有给出的字符都可以跳转.
         else if (token == '.'){
             if (addCat)
             //补充此字符与前一个字符默认"隐藏的"连接符
@@ -277,55 +242,20 @@ fun re2NFA(pattern: String) :Node{
             continue
         }
 
-//      旧思路:
-//        处理转义
-//        思路:'\d'转换为(0|1|...9)等
 
-        //新思路: 将转义字符集合映射为一些不可见ascii字符保存在边上, 然后节点跳转的时候做特殊判断处理.
+        //旧思路:'\d'转换为(0|1|...9)等
+        //新思路:'.'映射为一些特殊不可见ascii字符值保存在边上, 然后节点跳转的时候遇到了这个特殊值默认所有给出的字符如果满足特定条件(例如\d需要满足0-9)都可以跳转.
         //避免像一开始思路转换为(0|1|...9)和(a|b|c|d|e..|z)太大开销
         else if (token == '\\'){
 
             if (pattern[i + 1] in escapeTokensMap.keys){
-                //发生转义,转义到另一些字符集和
+                //发生转义,转义到另一些字符集和,所以要将d w s等字符不当做普通字符,映射为另一些特殊字符保存到边上
 
                 if (addCat)
                     //补充此字符与前一个字符默认"隐藏的"连接符
                     push_op(if (!inBracket) '-' else '|', opStack, subGraphStack)
 
                 createSingleSubGraph(escapeTokensMap[pattern[i + 1]]!!, subGraphStack)
-
-//                var escapeToRange :MutableList<Char> = mutableListOf() //用于存放各种不同转义后的对应关系
-//                when(pattern[i+1]){
-//                    'd' -> for (t in '0'..'9'){
-//                        escapeToRange.add(t)
-//                    }
-//                    'w' -> {
-//                        for (t in 'a'..'z'){
-//                          escapeToRange.add(t)
-//                        }
-//                        for (t in 'A'..'Z'){
-//                           escapeToRange.add(t)
-//                         }
-//                    }
-//                    's' -> escapeToRange = mutableListOf<Char>('\t', '\n', ' ')
-//                }
-//
-//                opStack.add('(') //压入'(', 方便转换为(||||)形式
-//
-//                for (ch in escapeToRange){
-//                    createSingleSubGraph(ch, subGraphStack)
-//
-//                    if (ch != escapeToRange.last()) {
-//                       push_op('|', opStack, subGraphStack)
-//                    }
-//                }
-//
-//                while (opStack.last() != '('){
-//                    val op = opStack.removeAt(opStack.lastIndex)
-//                    mergeSubGraph(op, subGraphStack)
-//                }
-//
-//                opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
                 addCat = true
                 i += 2
                 continue
@@ -352,74 +282,13 @@ fun re2NFA(pattern: String) :Node{
              */
         }
 
-        //新的思路转义\w \d等不是将其转换为(a|b|c|d..|z),而是映射到特殊不可见字符到边上处理
-        //而是重新处理{n} {n,m} {n,} 避免处理此修饰符\d \w等的作为与普通字符不同的一种特殊情况
         else if (token == '{'){
             //{n}的情况,转化为nfa子图中n个串联 例如a{3} --> aaa  \d{3} --> \d\d\d
             if (pattern[i+2] == '}'){
 
-//                //是转义字符集的重复次数,例如\d{3}
-//                if (i >= 2 && pattern[i - 2] == '\\' && pattern[i - 1] in escapeTokensMap.keys){
-//                    val repeatTime = pattern[i + 1].toInt() - '0'.toInt()
-//                    opStack.add('{')
-//                    subGraphStack.removeAt(subGraphStack.lastIndex)
-//
-//                    for (j in 1..repeatTime){
-//
-//                        var escapeToRange :MutableList<Char> = mutableListOf() //用于存放各种不同转义后的对应关系
-//                        when(pattern[i-1]){
-//                            'd' -> for (t in '0'..'9'){
-//                                escapeToRange.add(t)
-//                            }
-//                            'w' -> {
-//                                for (t in 'a'..'z'){
-//                                    escapeToRange.add(t)
-//                                }
-//                                for (t in 'A'..'Z'){
-//                                    escapeToRange.add(t)
-//                                }
-//                            }
-//                            's' -> escapeToRange = mutableListOf<Char>('\t', '\n', ' ')
-//                        }
-//
-//                        opStack.add('(') //压入'(', 方便转换为(||||)形式
-//
-//                        for (ch in escapeToRange){
-//                            createSingleSubGraph(ch, subGraphStack)
-//
-//                            if (ch != escapeToRange.last()) {
-//                                push_op('|', opStack, subGraphStack)
-//                            }
-//                        }
-//
-//                        while (opStack.last() != '('){
-//                            val op = opStack.removeAt(opStack.lastIndex)
-//                            mergeSubGraph(op, subGraphStack)
-//                        }
-//
-//                        opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
-//
-//                        if (j != repeatTime)
-//                            push_op('-', opStack, subGraphStack)
-//                    }
-//
-//                    while (opStack.last() != '{') {
-//                        val op = opStack.removeAt(opStack.lastIndex)
-//                        mergeSubGraph(op, subGraphStack)
-//                    }
-//
-//                    opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'{'
-//                    addCat = true
-//                    i += 3
-//                    continue
-//
-//                }
-
-
-                    //{n}需要重复的是普通字符,没有转义,或者转义符是用在转义操作符, 并非转义成字符集和
             val  repeatChar: Char
             if (i >= 2 && pattern[i - 2] == '\\' && pattern[i - 1] in escapeTokensMap.keys)
-                    repeatChar = escapeTokensMap[pattern[i - 1]]!!
+                    repeatChar = escapeTokensMap[pattern[i - 1]]!! //需要重复的是转义字符
             else
                     repeatChar = pattern[i - 1]
             val repeatTime = pattern[i + 1].toInt() - '0'.toInt()
@@ -444,85 +313,15 @@ fun re2NFA(pattern: String) :Node{
 
             }
 
-            //旧思路:
             //对应情况{n,m}
             //思路示意: a{1,3} --> (a|aa|aaa) \w --> (\w|\w\w|\w\w\w)
             else if (pattern[i + 2] == ',' && pattern[i + 3] != '}'){
-                //是转义字符集的重复次数,例如\d{3,8}
-//                if  (i >= 2 && pattern[i - 2] == '\\' && pattern[i - 1] !in operator_priority){
-//                    val minReapt = pattern[i + 1].toInt() - '0'.toInt()
-//                    val maxReapt = pattern[i + 3].toInt() - '0'.toInt()
-//                    val repeatChar = pattern[i - 1]
-//
-//                    subGraphStack.removeAt(subGraphStack.lastIndex)
-//                    opStack.add('(') //压入'(', 方便转换为(||||)形式
-//
-//                    for (repeatTime in minReapt..maxReapt) {
-//                        //先生成成类似于\d\d\d
-//                        opStack.add('(')
-//                        for (j in 1..repeatTime){
-//                            //构造单个\d
-//                            var escapeToRange :MutableList<Char> = mutableListOf() //用于存放各种不同转义后的对应关系
-//                            when(pattern[i-1]){
-//                                'd' -> for (t in '0'..'9'){
-//                                    escapeToRange.add(t)
-//                                }
-//                                'w' -> {
-//                                    for (t in 'a'..'z'){
-//                                        escapeToRange.add(t)
-//                                    }
-//                                    for (t in 'A'..'Z'){
-//                                        escapeToRange.add(t)
-//                                    }
-//                                }
-//                                's' -> escapeToRange = mutableListOf<Char>('\t', '\n', ' ')
-//                            }
-//                            opStack.add('(') //压入'(', 方便转换为(||||)形式
-//                            for (ch in escapeToRange){
-//                                createSingleSubGraph(ch, subGraphStack)
-//
-//                                if (ch != escapeToRange.last()) {
-//                                    push_op('|', opStack, subGraphStack)
-//                                }
-//                            }
-//                            while (opStack.last() != '('){
-//                                val op = opStack.removeAt(opStack.lastIndex)
-//                                mergeSubGraph(op, subGraphStack)
-//                            }
-//                            opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
-//                            //将\d\d\d与前面\d\d连接起来
-//                            if (j != repeatTime)
-//                                push_op('-', opStack, subGraphStack)
-//                        }
-//                        while (opStack.last() != '(') {
-//                            val op = opStack.removeAt(opStack.lastIndex)
-//                            mergeSubGraph(op, subGraphStack)
-//                        }
-//                        opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
-//                        //再将aaa与前面的aa相连接 变成a|aa|aaa
-//                        if (repeatTime != maxReapt) {
-//                            push_op('|', opStack, subGraphStack)
-//                        }
-//                    }
-//
-//                    while (opStack.last() != '(') {
-//                        val op = opStack.removeAt(opStack.lastIndex)
-//                        mergeSubGraph(op, subGraphStack)
-//                    }
-//                    opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
-//                    addCat = true
-//                    i += 5
-//                    continue
-//
-//
-//                }
-
 
                 val minReapt = pattern[i + 1].toInt() - '0'.toInt()
                 val maxReapt = pattern[i + 3].toInt() - '0'.toInt()
                 val  repeatChar: Char
                 if (i >= 2 && pattern[i - 2] == '\\' && pattern[i - 1] in escapeTokensMap.keys)
-                    repeatChar = escapeTokensMap[pattern[i - 1]]!!
+                    repeatChar = escapeTokensMap[pattern[i - 1]]!!  //需要重复的是转义字符
                 else
                     repeatChar = pattern[i - 1]
 
@@ -560,70 +359,9 @@ fun re2NFA(pattern: String) :Node{
             }
 
             //对应情况{n,}
-            //思路示意: a{2,} --> aa+  \w --> \w\w+
+            //思路示意: a{2,} --> aa+  \w{2,} --> \w\w+
             else if (pattern[i + 2] == ',' && pattern[i + 3] == '}'){
-                //是转义字符集的重复次数,例如\d{3,} 转换为\d\d+
-//                if (i >= 2 && pattern[i - 2] == '\\' && pattern[i - 1] in escapeTokensMap.keys){
-//                    val repeatTime = pattern[i + 1].toInt() - '0'.toInt()
-//                    opStack.add('{')
-//                    subGraphStack.removeAt(subGraphStack.lastIndex)
-//
-//                    for (j in 1..repeatTime){
-//
-//                        var escapeToRange :MutableList<Char> = mutableListOf() //用于存放各种不同转义后的对应关系
-//                        when(pattern[i-1]){
-//                            'd' -> for (t in '0'..'9'){
-//                                escapeToRange.add(t)
-//                            }
-//                            'w' -> {
-//                                for (t in 'a'..'z'){
-//                                    escapeToRange.add(t)
-//                                }
-//                                for (t in 'A'..'Z'){
-//                                    escapeToRange.add(t)
-//                                }
-//                            }
-//                            's' -> escapeToRange = mutableListOf<Char>('\t', '\n', ' ')
-//                        }
-//
-//                        opStack.add('(') //压入'(', 方便转换为(||||)形式
-//
-//                        for (ch in escapeToRange){
-//                            createSingleSubGraph(ch, subGraphStack)
-//
-//                            if (ch != escapeToRange.last()) {
-//                                push_op('|', opStack, subGraphStack)
-//                            }
-//                        }
-//
-//                        while (opStack.last() != '('){
-//                            val op = opStack.removeAt(opStack.lastIndex)
-//                            mergeSubGraph(op, subGraphStack)
-//                        }
-//
-//                        opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
-//
-//                        if (j != repeatTime)
-//                            push_op('-', opStack, subGraphStack)
-//                    }
-//
-//                    push_op('+', opStack, subGraphStack)
-//
-//                    while (opStack.last() != '{') {
-//                        val op = opStack.removeAt(opStack.lastIndex)
-//                        mergeSubGraph(op, subGraphStack)
-//                    }
-//
-//                    opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'{'
-//                    addCat = true
-//                    i += 4
-//                    continue
-//
-//                }
 
-
-
-                //{n,}需要重复的是普通字符,没有转义,或者转义符是用在转义操作符, 并非转义成字符集和
                 val  repeatChar: Char
                 if (i >= 2 && pattern[i - 2] == '\\' && pattern[i - 1] in escapeTokensMap.keys)
                     repeatChar = escapeTokensMap[pattern[i - 1]]!!
