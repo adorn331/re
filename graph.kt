@@ -517,29 +517,91 @@ fun re2NFA(pattern: String) :Node{
             //对应情况{n,}
             //思路示意: a{2,} --> aa+  \w --> \w\w+
             else if (pattern[i + 2] == ',' && pattern[i + 3] == '}'){
-                //{n,}需要重复的是普通字符,没有转义,或者转义符是用在转义操作符, 并非转义成字符集和
-                val repeatChar = pattern[i - 1]
-                val minRepeat = pattern[i + 1].toInt() - '0'.toInt()
-                opStack.add('{')
-                subGraphStack.removeAt(subGraphStack.lastIndex)
+                //是转义字符集的重复次数,例如\d{3,} 转换为\d\d+
+                if (i >= 2 && pattern[i - 2] == '\\' && pattern[i - 1] in escapeTokens){
+                    val repeatTime = pattern[i + 1].toInt() - '0'.toInt()
+                    opStack.add('{')
+                    subGraphStack.removeAt(subGraphStack.lastIndex)
 
-                for (j in 1..minRepeat) {
-                    createSingleSubGraph(repeatChar, subGraphStack)
-                    if (j != minRepeat)
-                        push_op('-', opStack, subGraphStack)
+                    for (j in 1..repeatTime){
+
+                        var escapeToRange :MutableList<Char> = mutableListOf() //用于存放各种不同转义后的对应关系
+                        when(pattern[i-1]){
+                            'd' -> for (t in '0'..'9'){
+                                escapeToRange.add(t)
+                            }
+                            'w' -> {
+                                for (t in 'a'..'z'){
+                                    escapeToRange.add(t)
+                                }
+                                for (t in 'A'..'Z'){
+                                    escapeToRange.add(t)
+                                }
+                            }
+                            's' -> escapeToRange = mutableListOf<Char>('\t', '\n', ' ')
+                        }
+
+                        opStack.add('(') //压入'(', 方便转换为(||||)形式
+
+                        for (ch in escapeToRange){
+                            createSingleSubGraph(ch, subGraphStack)
+
+                            if (ch != escapeToRange.last()) {
+                                push_op('|', opStack, subGraphStack)
+                            }
+                        }
+
+                        while (opStack.last() != '('){
+                            val op = opStack.removeAt(opStack.lastIndex)
+                            mergeSubGraph(op, subGraphStack)
+                        }
+
+                        opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'('
+
+                        if (j != repeatTime)
+                            push_op('-', opStack, subGraphStack)
+                    }
+
+                    push_op('+', opStack, subGraphStack)
+
+                    while (opStack.last() != '{') {
+                        val op = opStack.removeAt(opStack.lastIndex)
+                        mergeSubGraph(op, subGraphStack)
+                    }
+
+                    opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'{'
+                    addCat = true
+                    i += 4
+                    continue
+
                 }
 
-                push_op('+', opStack, subGraphStack)
 
-                while (opStack.last() != '{') {
-                    val op = opStack.removeAt(opStack.lastIndex)
-                    mergeSubGraph(op, subGraphStack)
+                else {
+                    //{n,}需要重复的是普通字符,没有转义,或者转义符是用在转义操作符, 并非转义成字符集和
+                    val repeatChar = pattern[i - 1]
+                    val minRepeat = pattern[i + 1].toInt() - '0'.toInt()
+                    opStack.add('{')
+                    subGraphStack.removeAt(subGraphStack.lastIndex)
+
+                    for (j in 1..minRepeat) {
+                        createSingleSubGraph(repeatChar, subGraphStack)
+                        if (j != minRepeat)
+                            push_op('-', opStack, subGraphStack)
+                    }
+
+                    push_op('+', opStack, subGraphStack)
+
+                    while (opStack.last() != '{') {
+                        val op = opStack.removeAt(opStack.lastIndex)
+                        mergeSubGraph(op, subGraphStack)
+                    }
+
+                    opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'{'
+                    addCat = true
+                    i += 4
+                    continue
                 }
-
-                opStack.removeAt(opStack.lastIndex) //移除刚刚添加进去的'{'
-                addCat = true
-                i += 4
-                continue
             }
         }
 

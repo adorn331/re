@@ -1,6 +1,6 @@
 class Match(val text: String,val start: Int,val end: Int){
     override fun toString(): String {
-        return "<Match(${this.start},${this.end}): \"${text.subSequence(start, end)}\">"
+        return "<Match(${this.start},${this.end}): match=\"${text.subSequence(start, end)}\">"
     }
 }
 
@@ -201,34 +201,4 @@ class CompiledRe(val pattern: String){
 
         return newText
     }
-}
-
-fun main(args: Array<String>) {
-
-    while (true) {
-        println("input a new regex to compile..")
-        val re = readLine()!!
-        println("input str..")
-        var text: String? = readLine()
-
-        if (re == "\\q")
-            break
-//        val m = match(re, text)
-//        println(m)
-////
-        val a = match(re, text)
-        println(a)
-
-//        println(replace(re, "!!!!", text))
-
-
-//        val c = compile(re)
-//        println("comile complete!")
-//        while (text != "\\q"){
-//            println(c.replace("!!!", text))
-//            println("input str..")
-//            text = readLine()
-//        }
-    }
-
 }
