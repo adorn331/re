@@ -1,12 +1,13 @@
-//交互试测试各种功能..
-//首先选择需要测试的正则函数1.match 2.findAll 3.search 4.replace
-//然后输入一个正则表达式,为了节省开销,编译好这个pattern然后不断输入字符串用这个编译好的对象进行测试看是否符合预想.
-//其中输入\q有返回上一层功能,可以进行测试新的正则表达式/切换测试函数
+/**交互测试此正则引擎所有接口功能..
+ *首先选择需要测试的正则函数1.match 2.findAll 3.search 4.replace 5.Match.group 6.Match.groups
+ *然后输入一个正则表达式,然后不断输入字符串对这个正则表达式进行匹配测试是否符合预想
+ *其中输入\b有返回上一层功能,可以进行测试新的正则表达式/切换测试函数
+*/
 fun main(args: Array<String>) {
     while (true) {
         println("\n选择需要测试函数的序号..")
         println("1.match 2.findAll 3.search \n4.replace 5.Match.group 6.Match.groups() (输入\\q to quit)")
-        var testMod  = readLine()!!
+        val testMod  = readLine()!!
         if (testMod == "\\q")
             break
 
