@@ -1,7 +1,30 @@
-class Match(val text: String,val start: Int,val end: Int){
+import java.util.*
+import javax.lang.model.type.IntersectionType
+
+class Match(val text: String, val start: Int, val end: Int, var groupInfo: MutableMap<Int, Set<Int>> = mutableMapOf<Int, Set<Int>>()){
     override fun toString(): String {
         return "<Match(${this.start},${this.end}): match=\"${text.subSequence(start, end)}\">"
     }
+
+
+    fun group(groupId: Int = 0): String?{
+        //根据之前传来的group信息在文本中寻找第groupId个组的内容
+        var groupStartPos: Int = -1
+        var groupEndPos: Int = -1
+        var found = false
+
+        for (i in start..end - 1){
+            if ((i > start && groupId !in groupInfo[i - 1]?: mutableSetOf() || i == start) &&  groupId in groupInfo[i]?: mutableSetOf()) {
+                groupStartPos = i
+                found = true
+            }
+            if ((i < end && groupId !in groupInfo[i + 1]?: mutableSetOf() || i == end - 1)&&  groupId in groupInfo[i]?: mutableSetOf())
+                groupEndPos = i
+        }
+
+        return if (found) text.subSequence(groupStartPos, groupEndPos + 1).toString() else  null
+    }
+
 }
 
 //从首字母开始开始匹配，string如果包含pattern子串，则匹配成功，返回Match对象，失败则返回null，若要完全匹配，pattern要以$结尾
@@ -67,6 +90,11 @@ class CompiledRe(val pattern: String){
         var startPos = 0
         var endPos = 0
 
+        val groupInfo = mutableMapOf<Int, Set<Int>>() //对应每个位置上的字符在哪些组
+        val currentGroupIdSet = mutableSetOf<Int>()
+
+        var nextIntersectionAffeted = false
+
         val matchStack = mutableListOf<Int>() //保存贪婪匹配时已经接受状态了的在字符串中的位置在栈中,方便回溯,然后继续向后匹配
 
         while (endPos < text.length){
@@ -80,6 +108,33 @@ class CompiledRe(val pattern: String){
                     matchStack.clear()
                     matchStack.add(endPos) //压入已经匹配的位置方便以后回溯
                 }
+
+
+
+                if (nextNode!= null) {
+
+                    var IntersectionStatu = false
+                    var IntersectionGroupId  :Int = -1
+                    for (endid in dfaNode.endOfGroup){
+                        if (endid != 0 && endid in dfaNode.startOfGroup) {
+                            IntersectionStatu = true
+                            IntersectionGroupId = endid
+                        }
+                    }
+
+                    currentGroupIdSet.addAll(dfaNode.startOfGroup)
+                    currentGroupIdSet.removeAll(dfaNode.endOfGroup)
+
+                    val charInGroup = mutableSetOf<Int>()
+                    for (i in currentGroupIdSet)
+                        charInGroup.add(i)
+                    if (IntersectionStatu) {
+                        charInGroup.add(IntersectionGroupId)
+                    }
+                    groupInfo.put(endPos, charInGroup)
+
+                }
+
             }
 
             else
@@ -88,8 +143,9 @@ class CompiledRe(val pattern: String){
             dfaNode = dfaNode.nextNode(text[endPos])
             endPos += 1
         }
+        println(groupInfo)
 
-        return if (matchStack.isEmpty()) null else Match(text, startPos, matchStack.last() + 1)
+        return if (matchStack.isEmpty()) null else Match(text, startPos, matchStack.last() + 1, groupInfo)
     }
 
     //返回text中所有与pattern相匹配的全部字串，返回形式为一个Match对象的集合

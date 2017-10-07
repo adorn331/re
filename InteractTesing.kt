@@ -24,7 +24,8 @@ fun main(args: Array<String>) {
             while (text != "\\b") {
 
                 when(testMod){
-                    "1" -> println(compiled.match(text))
+                    "1" -> {println(compiled.match(text))
+                        println(compiled.match(text)!!.group(1))}
                     "2" -> println(compiled.findAll(text))
                     "3" -> println(compiled.search(text))
                     "4" ->{

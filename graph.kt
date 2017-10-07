@@ -1,15 +1,18 @@
 import kotlin.concurrent.fixedRateTimer
 
 val operator_priority = mapOf('(' to -1, '[' to -1,'{' to -1, '|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3, '.' to 0)
-// 三种基本的符号：或 连接 闭包
+// 为了满足将"操作符"(其实是限定符修饰符) 压栈需要,要有优先级.但'.'的存在只是为了后面判断是不是转义\.判断它要变成普通的.
 
 val escapeTokensMap =  mapOf('.' to 1.toChar(), 'w' to 2.toChar(), 'd' to 3.toChar(), 's' to 4.toChar()) //转义字符集
-//为了优化性能不转换为(a|b|c....|y|z|),将转义字符集合映射为一些不可见ascii字符保存在边上, 然后节点跳转的时候做特殊判断处理.
+//处理'.' \d \w等时候为了优化性能不转换为(a|b|c....|y|z|),将转义字符集合映射为一些不可见ascii字符保存在边上, 然后节点跳转的时候做特殊判断处理.
 
 val sEscapeSet = setOf('\t', '\n', ' ')
 
 class Node(val inEdges: MutableList<Edge> = mutableListOf<Edge>(),
            val outEdges: MutableList<Edge> = mutableListOf<Edge>(), var end: Boolean=false){
+
+    val startOfGroup = mutableSetOf<Int>()
+    val endOfGroup = mutableSetOf<Int>()
 
     //查看这个nfa节点通过非epsilon边可以到达的节点集合
     fun nextNodes (v: Char) :MutableSet<Node>{
@@ -154,6 +157,9 @@ fun re2NFA(pattern: String) :Node{
     var inBracket = false //标志是否在[]当中, 是的话字符间的连接不应该默认是'-'而应该默认是'|'
     var addCat = false //确认是否需要补上字符间默认的连接符'-'
 
+    val groupIdStack = mutableListOf<Int>() //保存组别序号的栈,用于组开始时压入'(',有')' 配对时候弹出
+    var groupId = 0
+
     var i = 0
     while (i < pattern.length){
         val token = pattern[i]
@@ -166,6 +172,9 @@ fun re2NFA(pattern: String) :Node{
             isOp = true
         }
         else if (token == '('){
+            groupId += 1 //新的一个组
+            groupIdStack.add(groupId)
+
             if (addCat)
                 //补充此字符与前一个字符默认"隐藏的"连接符
                 push_op(if (!inBracket) '-' else '|', opStack, subGraphStack)
@@ -176,11 +185,21 @@ fun re2NFA(pattern: String) :Node{
             continue
         }
         else if (token == ')'){
+            val currentGroupId = groupIdStack.removeAt(groupIdStack.lastIndex)
+
             while (opStack[opStack.lastIndex] != '('){
                 val op = opStack.removeAt(opStack.lastIndex)
                 mergeSubGraph(op, subGraphStack)
             }
             opStack.removeAt(opStack.lastIndex) //弹出'('
+
+            val subGraph = subGraphStack.last()
+            val startNode = subGraph[0]
+            val endNode = subGraph[1]
+
+            startNode.startOfGroup.add(currentGroupId)
+            endNode.endOfGroup.add(currentGroupId)
+
             addCat = true
             i += 1
             continue
@@ -420,7 +439,14 @@ fun re2NFA(pattern: String) :Node{
         mergeSubGraph(op, subGraphStack)
     }
 
-    return subGraphStack[0][0] //
+    val nfaStartNode = subGraphStack[0][0] //subGraphStack[0]子图栈顶的子图,也就是最后的nfa图,返回nfa图的起始节点
+    val nfaEndNode = subGraphStack[0][1]
+
+    //因为整个字符串都是第0组的
+    nfaStartNode.startOfGroup.add(0)
+    nfaEndNode.endOfGroup.add(0)
+
+    return nfaStartNode //返回nfa图的起始节点
 }
 
 
@@ -491,17 +517,25 @@ fun nfa2DFA(nfaStart: Node): Node{
             if (nfaNode.end) {
                 currentDfaNode.end = true
             }
+            currentDfaNode.startOfGroup.addAll(nfaNode.startOfGroup)
+            currentDfaNode.endOfGroup.addAll(nfaNode.endOfGroup)
+
         }
 
+//        println(currentDfaNode)
+//        println(currentDfaNode.startOfGroup)
+//        println(currentDfaNode.endOfGroup)
+//        println("\n\n")
 
         val alphaSet = mutableSetOf<Char>()     //存放可以到达的字符
+
         for (alpha in 32.toChar()..126.toChar()){   //支持所有可见ASCII字符集
             for (nfaNode in currentSet){
                 if (!nfaNode.nextNodes(alpha).isEmpty())
                     alphaSet.add(alpha)
             }
         }
-        for (alpha in 1.toChar()..4.toChar()){   //支持所有可见ASCII字符集
+        for (alpha in 1.toChar()..4.toChar()){   //查看是否有到达转义字符
             for (nfaNode in currentSet){
                 if (!nfaNode.nextNodes(alpha).isEmpty())
                     alphaSet.add(alpha)
