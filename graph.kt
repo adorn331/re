@@ -1,3 +1,5 @@
+/**包含正则表达式引擎将正则表达式转换为nfa再转换到dfa图的所需数据结构和函数*/
+
 val operator_priority = mapOf('(' to -1, '[' to -1,'{' to -1, '|' to 1, '-' to 2, '*' to 3, '?' to 3, '+' to 3, '.' to 0)
 // 为了满足将"操作符"(其实是限定符修饰符) 压栈需要,要有优先级.但'.'的存在只是为了后面判断是不是转义\.判断它要变成普通的.
 
@@ -99,7 +101,6 @@ fun createSingleSubGraph(value: Char, subGraphStack: MutableList<List<Node>>){
  * param:
  *      operator:合并subGraphStack最顶的两个子图所用的的"操作符",'|'代表并联,'-'代表串联,'*'代表闭包.还有'?' '+' 等等
  *      subGraphStack:将弹出后处理成新的子图再压回这个栈中
- *
  */
 fun mergeSubGraph(operator: Char, subGraphStack: MutableList<List<Node>>){
 
@@ -206,16 +207,13 @@ fun pushOp(operator: Char, opStack: MutableList<Char>, subGraphStack: MutableLis
  *
  * param:
  *      pattern:用于转换为NFA图的正则表达式模板
- *
+ *       * return:
+ *      转换后NFA图的起始节点
  * note:
  *      使用了两个重要的栈进行构造整个NFA图:一个栈主要用于存放当时已经合并好的NFA子图
  *      另一个用于存放合并这些NFA子图所需要的"操作符"
  *      最开始就基本的子图都是通过单个字符构成的,然后不停合并最终成为NFA图
- *
  *      思想参照龙书:正则表达式都是由最基本的几种正则表达式递归组成的,那么NFA子图也应该是由许多最基本的子图不断合并成的
- *
- * return:
- *      转换后NFA图的起始节点
  */
 fun re2NFA(pattern: String) :Node{
     val subGraphStack: MutableList<List<Node>> = mutableListOf() //存放子图
@@ -524,10 +522,8 @@ fun re2NFA(pattern: String) :Node{
 /**
  * 获得一个nfa节点的epsilon闭包, 服务于子集构造算法,思想参照龙书
  *
- *
  * param:
  *      node:需要构造epsilon闭包的nfa节点
- *
  * return:
  *      此nfa节点通过epsilon边能够到达的节点集合
  */
@@ -557,10 +553,8 @@ fun epsClosure(node :Node) :MutableSet<Node>{
 /**
  * 获得一个nfa节点的集合的epsilon闭包, 服务于子集构造算法,思想参照龙书
  *
- *
  * param:
  *      nfaSet:需要构造epsilon闭包的nfa节点的集合
- *
  * return:
  *      这些nfa节点通过epsilon边能够到达的节点集合
  */
@@ -575,11 +569,9 @@ fun epsClosureSet(nfaSet: MutableSet<Node>) :MutableSet<Node>{
 /**
  * 获得一个nfa节点集合能够通过value移动到的节点集合
  *
- *
  * param:
  *      nfaSet:起始的nfa节点集合
  *      value: 跳转边上的值
- *
  * return:
  *      这些nfa节点通过值为value的边能够到达的节点集合
  */
@@ -593,10 +585,8 @@ fun move(nfaSet: MutableSet<Node>, value: Char) :MutableSet<Node>{
 /**
  * 使用子集构造算法用于将NFA转换为DFA图,思想参照龙书
  *
- *
  * param:
  *      nfaStart:NFA图的起始节点
- *
  * return:
  *      返回DFA图的起点
  */

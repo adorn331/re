@@ -1,3 +1,13 @@
+/**包含正则表达式引擎的用户接口:
+ *      match:首字母开始开始匹配，string如果包含pattern子串，则匹配成功，返回Match对象，失败则返回null，若要完全匹配，pattern要以$结尾
+ *      findAll:返回text中所有与pattern相匹配的全部子串，返回形式为一个Match对象的集合
+ *      search:若text中包含pattern子串，有则返回Match对象，否则返回None，如果text中存在多个pattern子串，只返回第一个
+ *      replace:替换text中所有与pattern相匹配的全部字串替换为replacement,返回一个替换后的字符串
+ *      compile:编译正则表达式,返回一个CompiledRe类,里面已经编译构造好dfa图并且封装了各种match findAll等等方法能对编译好了的正则直接进行匹配
+ *
+ * 同时包含了匹配成功的类Match和编译正则后的类compiledRe.
+ */
+
 /**
  * 匹配正则表达式成功的类
  *
@@ -63,14 +73,11 @@ class Match(val text: String, val start: Int, val end: Int, var groupInfo: Mutab
 /**
  * 从首字母开始开始匹配，string如果包含pattern子串，则匹配成功，返回Match对象，失败则返回null，若要完全匹配，pattern要以$结尾
  *
- *
  * param:
  *      pattern:匹配的正则表达式模板
  *      text:需要匹配的源字符串
- *
  * return:
  *      成功匹配返回Match对象,否则返回null
- *
  * note:
  *      具体实现逻辑细节封装在compile后的CompiledRe.match()里面
  */
@@ -83,14 +90,11 @@ fun match(pattern:String, text: String?) :Match?{
 /**
  * 返回text中所有与pattern相匹配的全部子串，返回形式为一个Match对象的集合
  *
- *
  * param:
  *      pattern:匹配的正则表达式模板
  *      text:需要匹配的源字符串
- *
  * return:
  *      寻找到匹配成功返回Match对象的集合,否则返回null
- *
  * note:
  *      具体实现逻辑细节封装在compile后的CompiledRe.findAll()里面
  */
@@ -101,18 +105,14 @@ fun findAll(pattern:String, text: String?): MutableSet<Match>?{
 }
 
 
-//若text中包含pattern子串，有则返回Match对象，否则返回None，如果text中存在多个pattern子串，只返回第一个
 /**
  * 若text中包含pattern子串，有则返回Match对象，否则返回None，如果text中存在多个pattern子串，只返回第一个
- *
  *
  * param:
  *      pattern:匹配的正则表达式模板
  *      text:需要匹配的源字符串
- *
  * return:
  *      寻找到成功匹配返回Match对象,否则返回null
- *
  * note:
  *      具体实现逻辑细节封装在compile后的CompiledRe.search()里面
  */
@@ -125,15 +125,12 @@ fun search(pattern:String, text: String?): Match?{
 /**
  * 替换text中所有与pattern相匹配的全部字串替换为replacement,返回一个替换后的字符串
  *
- *
  * param:
  *      pattern:匹配的正则表达式模板
  *      replacement:用于替换的字符串
  *      text:需要匹配的源字符串
- *
  * return:
  *      返回一个替换后的字符串,无匹配则返回原来字符串,原来字符串为空则返回空
- *
  * note:
  *      具体实现逻辑细节封装在compile后的CompiledRe.replace()里面
  */
@@ -146,14 +143,11 @@ fun replace(pattern:String, replacement: String,text: String?): String?{
 /**
  * 编译正则表达式,返回一个CompiledRe类,里面已经编译构造好dfa图并且封装了各种match findAll等等方法能对编译好了的正则直接进行匹配
  *
- *
  * param:
  *      pattern:匹配的正则表达式模板
  *      text:需要匹配的源字符串
- *
  * return:
  *      返回一个CompiledRe类
- *
  * note:
  *      当需要重复匹配同一较为复杂的正则表达式的时候可以预先编译减少开销
  */
@@ -169,17 +163,14 @@ fun compile(pattern: String): CompiledRe{
  *      dfaStartNode: 将正则表达式经过转换为nfa图在转换为dfa图后的dfa图起点
  *      matchHead: 标志pattern是否有'^'修饰
  *      matchTail: 标志pattern是否有'$'修饰
- *
  * method:
  *      match:参照以上match函数注解内容
  *      findAll:参照以上findAll函数注解内容
  *      search:参照以上search函数注解内容
  *      replace:参照以上replace函数注解内容
- *
  * note:
  *      实例化后构造函数自动编译正则表达式(就是构造nfa图然后转换为dfa图)
  *      当需要重复匹配同一较为复杂的正则表达式的时候可以预先编译减少开销
- *
  */
 class CompiledRe(private val pattern: String){
 
