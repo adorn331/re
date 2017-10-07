@@ -117,7 +117,7 @@ class CompiledRe(val pattern: String){
 
         var nextIntersectionAffeted = false
 
-        val matchStack = mutableListOf<Int>() //保存贪婪匹配时已经接受状态了的在字符串中的位置在栈中,方便回溯,然后继续向后匹配
+        val matchStack = mutableListOf<Int>() //保存上次已经接受状态了的在字符串中的位置在栈中,方便回溯,然后继续向后匹配
 
         while (endPos < text.length){
 
@@ -132,7 +132,7 @@ class CompiledRe(val pattern: String){
                 }
 
 
-
+                //处理分组信息保存在groupInfo中
                 if (nextNode!= null) {
 
                     var IntersectionStatu = false
