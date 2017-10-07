@@ -25,7 +25,7 @@ fun main(args: Array<String>) {
 
                 when(testMod){
                     "1" -> {println(compiled.match(text))
-                        println(compiled.match(text)!!.group(1))}
+                        println(compiled.match(text)!!.groups())}
                     "2" -> println(compiled.findAll(text))
                     "3" -> println(compiled.search(text))
                     "4" ->{

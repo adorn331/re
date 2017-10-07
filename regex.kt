@@ -7,12 +7,14 @@ class Match(val text: String, val start: Int, val end: Int, var groupInfo: Mutab
     }
 
 
+    //根据之前传来的group信息在文本中寻找第groupId个组的内容
     fun group(groupId: Int = 0): String?{
-        //根据之前传来的group信息在文本中寻找第groupId个组的内容
+
         var groupStartPos: Int = -1
         var groupEndPos: Int = -1
         var found = false
 
+        //利用groupInfo中保存了text中的每个字符串所属的group对应关系
         for (i in start..end - 1){
             if ((i > start && groupId !in groupInfo[i - 1]?: mutableSetOf() || i == start) &&  groupId in groupInfo[i]?: mutableSetOf()) {
                 groupStartPos = i
@@ -23,8 +25,28 @@ class Match(val text: String, val start: Int, val end: Int, var groupInfo: Mutab
         }
 
         return if (found) text.subSequence(groupStartPos, groupEndPos + 1).toString() else  null
+        //没有这个组就返回nll
     }
 
+    //得到全部()捕获的组的一个集合
+    fun groups(): MutableSet<String>{
+        val groups = mutableSetOf<String>() //要返回的所有()捕获的字符串
+        var maxId = 0
+
+        //获得所最大组别id
+        for (belongGroups in groupInfo.values){
+            for (i in belongGroups){
+                if (i > maxId)
+                    maxId = i
+            }
+        }
+
+        for (i in 1..maxId){
+                groups.add(group(i)!!)
+        }
+
+        return groups
+    }
 }
 
 //从首字母开始开始匹配，string如果包含pattern子串，则匹配成功，返回Match对象，失败则返回null，若要完全匹配，pattern要以$结尾
@@ -143,7 +165,6 @@ class CompiledRe(val pattern: String){
             dfaNode = dfaNode.nextNode(text[endPos])
             endPos += 1
         }
-        println(groupInfo)
 
         return if (matchStack.isEmpty()) null else Match(text, startPos, matchStack.last() + 1, groupInfo)
     }
