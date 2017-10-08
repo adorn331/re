@@ -88,12 +88,12 @@ Match类打印的格式为(0,16)是匹配的下标(左闭右开),match="TELtel22
 
 * findAll(pattern, text):返回text中所有与pattern相匹配的全部子串，返回形式为一个Match对象的集合
 
-示例:```([0-9]+@qq.com|QQmail)```<br>
-返回:```[<Match(7,22): match="78994839@qq.com">, <Match(28,34): match="QQmail">]```<br>
+示例:```findAll("[0-9]+@qq.com|QQmail", "dvalkmlj4564345@qq.comsdlfj324324234@qq.comsadjflQQmailsdkf")```<br>
+返回:```[<Match(8,22): match="4564345@qq.com">, <Match(27,43): match="324324234@qq.com">, <Match(49,55): match="QQmail">]```<br>
 
 * search(pattern, text):若text中包含pattern子串，有则返回Match对象，否则返回None，如果text中存在多个pattern子串，只返回第一个  
-示例:```([0-9]+@qq.com|QQmail)```<br>
-返回:```<Match(7,22): match="78994839@qq.com">```<br>
+示例:```Search("[0-9]+@qq.com|QQmail", "dvalkmlj4564345@qq.comsdlfj324324234@qq.comsadjflQQmailsdkf")```<br>
+返回:```<Match(8,22): match="4564345@qq.com">```<br>
 
 * replacepattern, replacement,text):替换text中所有与pattern相匹配的全部字串替换为replacement,返回一个替换后的字符串
 示例:```replace('test1|test2',"****", "32432kdltest1hhmmi998test3kmkkktest2jjj")```
