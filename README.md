@@ -92,17 +92,28 @@ Match类打印的格式为(0,16)是匹配的下标(左闭右开),match="TELtel22
 返回:```[<Match(8,22): match="4564345@qq.com">, <Match(27,43): match="324324234@qq.com">, <Match(49,55): match="QQmail">]```<br>
 
 * search(pattern, text):若text中包含pattern子串，有则返回Match对象，否则返回None，如果text中存在多个pattern子串，只返回第一个  
-示例:```Search("[0-9]+@qq.com|QQmail", "dvalkmlj4564345@qq.comsdlfj324324234@qq.comsadjflQQmailsdkf")```<br>
+示例:```search("[0-9]+@qq.com|QQmail", "dvalkmlj4564345@qq.comsdlfj324324234@qq.comsadjflQQmailsdkf")```<br>
 返回:```<Match(8,22): match="4564345@qq.com">```<br>
 
-* replacepattern, replacement,text):替换text中所有与pattern相匹配的全部字串替换为replacement,返回一个替换后的字符串
+* replace(pattern, replacement,text):替换text中所有与pattern相匹配的全部字串替换为replacement,返回一个替换后的字符串
 示例:```replace('test1|test2',"****", "32432kdltest1hhmmi998test3kmkkktest2jjj")```
 返回:```32432kdl****hhmmi998test3kmkkk****jjj```
 
 * compile:编译正则表达式,返回一个CompiledRe类,里面已经编译构造好dfa图并且封装了各种match findAll等等方法能对编译好了的正则直接进行匹配
 
+* Match对象的groups()和group: 
+示例:
+```m = match("aa(bb)cc(dd)ee", "aabbccddee")```<br>
+```m.groups()```->```[bb, dd]```<br>
+```m.group(0)```->```aabbccddee```<br>
+```m.group(1)```->```bb```<br>
+ ```m.group(2)```->```dd```<br>
+
+# 使用环境配置 & 测试方法
+* 使用配置: 将graph.kt和regex.kt复制到任意Kotlin project的src目录下即可在src其他目录下调用match findAll search replace comile等函数
+* 测试此引擎:  将graph.kt和regex.kt复制到任意Kotlin project的src目录并复制InteractingTesing.kt到此目录,运行InteractingTesing的main入口即可交互式进行测试此正则表达式功能函数
+
 # 后续思考&未完成
 可以说从龙书中收益良多,对词法分析,正则表达式都有了新的了解,虽然自己写引擎不一定,但以后用正则表达式是更清晰怎么回事了.<br>
-而对于DFA图还没有进行最小化工作可能开销会很大..而且感觉也有挺多潜在bug没有找出来.还有Kotlin写得也不像优雅的Kotlin,没有体现语言的特色.
-但时间匆忙先做到这,以后继续慢慢完善.
+而对于DFA图还没有进行最小化工作可能开销会很大..而且感觉也有挺多潜在bug没有找出来.还有Kotlin写得也不像优雅的Kotlin,没有体现语言的特色.然后findAll出来的Match集合忘了补上支持group(),只有match函数返回的对象支持.但时间匆忙先做到这,以后继续慢慢完善.
 
