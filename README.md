@@ -50,7 +50,7 @@ Match类打印的格式为(0,10)是匹配的下标(左闭右开),match="222-2333
  注: 只支持match得到的Match对象使用,findAll得到的Match对象忘了配适group和groups功能..
 
 # 使用环境配置 & 测试方法
-* 使用配置: 将graph.kt和regex.kt复制到任意Kotlin project的src目录下即可在src其他目录下调用match findAll search replace comile等函数
+* 使用配置: 将graph.kt和regex.kt复制到任意Kotlin project的src目录下即可在src其他文件内调用match findAll search replace comile等API
 * 测试此引擎:  将graph.kt和regex.kt复制到任意Kotlin project的src目录并复制InteractingTesing.kt到此目录,运行InteractingTesing的main入口即可交互式进行测试此正则表达式功能函数
 
 # 总体设计
