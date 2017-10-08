@@ -80,11 +80,11 @@ InteractingTesing:包含用于测试此正则引擎各项功能的入口<br>
 # 用户接口
 * match(pattern, text):首字母开始开始匹配，string如果包含pattern子串，则匹配成功，返回Match对象，失败则返回null，若要完全匹配，pattern要以$结尾
 
-示例:```match("(tel|TEL)+\d{3}\-\d{3,8}", "TELtel222-233333x")```
-返回:```<Match(0,16): match="TELtel222-233333">```
+示例:```match("\d{3}\-\d{3,8}", "222-233333xxx")```
+返回:```<Match(0,10): match="222-233333">```
 
 注:返回的为Match类,封装了了用于匹配文本和匹配的起始终止位置,同时也封装了group() groups()等方法
-Match类打印的格式为(0,16)是匹配的下标(左闭右开),match="TELtel222-233333"是匹配出的字符串
+Match类打印的格式为(0,10)是匹配的下标(左闭右开),match="222-233333"是字符串所匹配的部分
 
 * findAll(pattern, text):返回text中所有与pattern相匹配的全部子串，返回形式为一个Match对象的集合
 
@@ -100,6 +100,11 @@ Match类打印的格式为(0,16)是匹配的下标(左闭右开),match="TELtel22
 返回:```32432kdl****hhmmi998test3kmkkk****jjj```
 
 * compile:编译正则表达式,返回一个CompiledRe类,里面已经编译构造好dfa图并且封装了各种match findAll等等方法能对编译好了的正则直接进行匹配
+示例:```val c  = compile("\d{3}\-\d{3,8}")```<br>
+```c.match("222-233333x")``` ->  ```<Match(0,10): match="222-233333">```<br>
+```c.match("6666-22") ``` -> ```null```<br>
+
+
 
 * Match对象的groups()和group: 
 示例:
