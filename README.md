@@ -13,7 +13,7 @@ InteractingTesing:包含用于测试此正则引擎各项功能的入口<br>
 # 用户接口
 * match(pattern, text):首字母开始开始匹配，string如果包含pattern子串，则匹配成功，返回Match对象，失败则返回null，若要完全匹配，pattern要以$结尾
 
-示例:```match("\d{3}\-\d{3,8}", "222-233333xxx")```
+示例:```match("\\d{3}\\-\\d{3,8}", "222-233333xxx")```
 返回:```<Match(0,10): match="222-233333">```
 
 注:返回的为Match类,封装了了用于匹配文本和匹配的起始终止位置,同时也封装了group() groups()等方法
