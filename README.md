@@ -29,7 +29,7 @@ Match类打印的格式为(0,10)是匹配的下标(左闭右开),match="222-2333
 返回:```<Match(8,22): match="4564345@qq.com">```<br>
 
 * replace(pattern, replacement,text):替换text中所有与pattern相匹配的全部字串替换为replacement,返回一个替换后的字符串
-示例:```replace('test1|test2',"****", "32432kdltest1hhmmi998test3kmkkktest2jjj")```
+示例:```replace("test1|test2","****", "32432kdltest1hhmmi998test3kmkkktest2jjj")```
 返回:```32432kdl****hhmmi998test3kmkkk****jjj```
 
 * compile:编译正则表达式,返回一个CompiledRe类,里面已经编译构造好dfa图并且封装了各种match findAll等等方法能对编译好了的正则直接进行匹配
