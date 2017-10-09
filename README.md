@@ -33,7 +33,7 @@ Match类打印的格式为(0,10)是匹配的下标(左闭右开),match="222-2333
 返回:```32432kdl****hhmmi998test3kmkkk****jjj```
 
 * compile:编译正则表达式,返回一个CompiledRe类,里面已经编译构造好dfa图并且封装了各种match findAll等等方法能对编译好了的正则直接进行匹配
-示例:```val c  = compile("\d{3}\-\d{3,8}")```<br>
+示例:```val c  = compile("\\d{3}\\-\\d{3,8}")```<br>
 ```c.match("222-233333x")``` ->  ```<Match(0,10): match="222-233333">```<br>
 ```c.match("6666-22") ``` -> ```null```<br>
 
