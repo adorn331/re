@@ -48,7 +48,7 @@ class Node(val inEdges: MutableList<Edge> = mutableListOf(),
         for (edge in this.outEdges){
             if (edge.value != null && edge.value == escapeTokensMap['.'])
                 return edge.endNode
-            if (edge.value != null && edge.value == escapeTokensMap['d'] && v in '1'..'9')
+            if (edge.value != null && edge.value == escapeTokensMap['d'] && v in '0'..'9')
                 return edge.endNode
             if (edge.value != null && edge.value == escapeTokensMap['w'] && (v in 'a'..'z' || v in 'A'..'Z'))
                 return edge.endNode
